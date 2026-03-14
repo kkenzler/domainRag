@@ -1,0 +1,6 @@
+Extract the core knowledge from the following learning material as structured prose paragraphs.
+
+Each paragraph should capture one coherent concept or principle. Separate paragraphs with a blank line. Write only the knowledge paragraphs — no headers, no lists, no commentary.
+
+Learning material:
+{{DOCUMENT}}
