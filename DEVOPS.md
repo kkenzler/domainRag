@@ -1,4 +1,4 @@
-# RAG TestGen — System Context Prompt for LLM Collaborators
+# domainRag — System Context
 
 ## What This Program Does
 
@@ -298,17 +298,3 @@ single-model generation?
   (b) full file replacement if changes span multiple functions or are extensive
   Do NOT provide surgical line-level snippets or partial function bodies
 - When advising on prompt changes, provide full replacement text for the `.txt` file
-
----
-
-## Session Workflow
-
-**WAIT** — do not proceed with analysis until the user confirms all file uploads are complete.
-Acknowledge receipt and state you are ready and waiting.
-
-When the user confirms uploads are complete:
-1. Read and acknowledge uploaded files
-2. Identify any regressions, bugs, or inconsistencies vs known state above
-3. Wait for user to state session objective before proposing changes
-4. Propose changes incrementally, confirm before implementing
-5. After each run, review uploaded logs and XLSX to verify changes had intended effect
