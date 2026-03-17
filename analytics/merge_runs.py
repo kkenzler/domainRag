@@ -1,11 +1,12 @@
 """
 merge_runs.py — Merge all batch XLSX runs into a single master file.
 
-Scans analytics/<batch-label>/run_*.xlsx across all 4 batches,
-combines Items + Reviewer Decisions + Traceability + Quality Metrics,
-adds batch_label column, writes analytics/merged_master.xlsx.
+Scans analytics/local-local/ and analytics/haikuPermutations/<batch-label>/
+for run_*.xlsx across all 4 batches, combines Items + Reviewer Decisions +
+Traceability + Quality Metrics, adds batch_label column, writes
+analytics/merged_master.xlsx.
 
-Also runs viz.py --merged to generate cross-condition comparison charts.
+Also runs analyticsVizs.py --merged to generate cross-condition comparison charts.
 
 Usage:
     python merge_runs.py
@@ -40,14 +41,21 @@ MERGE_SHEETS = ["Items", "Reviewer Decisions", "Traceability"]
 QM_SHEET = "Quality Metrics"
 
 
+def _batch_root(label: str) -> Path:
+    """Return the directory that contains a given batch label folder.
+    local-local lives directly in analytics/; haiku-* live in analytics/haikuPermutations/.
+    """
+    if label == "local-local":
+        return SCRIPT_DIR
+    return SCRIPT_DIR / "haikuPermutations"
+
+
 def find_run_files() -> list[tuple[str, str, Path]]:
     """Returns list of (batch_label, difficulty, xlsx_path)."""
     runs = []
-    for batch_dir in sorted(SCRIPT_DIR.iterdir()):
+    for label in BATCH_ORDER:
+        batch_dir = _batch_root(label) / label
         if not batch_dir.is_dir():
-            continue
-        label = batch_dir.name
-        if label not in BATCH_ORDER:
             continue
         for xlsx in sorted(batch_dir.glob("run_*.xlsx")):
             # Determine difficulty from the Items sheet
@@ -157,16 +165,16 @@ def main() -> None:
     print(f"\nSaved: {out_path}")
     print(f"  Sheets: {out_wb.sheetnames}")
 
-    # Trigger merged viz if viz.py supports it
-    viz_py = SCRIPT_DIR / "viz.py"
+    # Trigger merged viz
+    viz_py = SCRIPT_DIR / "analyticsVizs.py"
     if viz_py.exists():
-        print("\nRunning viz.py --merged ...")
+        print("\nRunning analyticsVizs.py --merged ...")
         rc = subprocess.run(
             [sys.executable, str(viz_py), "--merged", str(out_path)],
             cwd=str(SCRIPT_DIR),
         ).returncode
         if rc != 0:
-            print(f"  viz.py --merged returned {rc} (may not be implemented yet)")
+            print(f"  analyticsVizs.py --merged returned {rc}")
 
     print("\nMerge complete.")
 

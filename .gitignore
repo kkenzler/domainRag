@@ -6,6 +6,10 @@
 # domainRag: generated run outputs (xlsx, manifests, logs) — keep analytics/ snapshots
 _rag_testGen/runs/
 
+# Client/confidential corpus folders — never commit
+_client_corpus/
+_private_corpus/
+
 # User-specific files
 *.rsuser
 *.suo

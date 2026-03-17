@@ -36,7 +36,7 @@ RAG_DIR    = REPO_DIR / "_rag_testGen"                # domainRag/_rag_testGen/
 RUNS_DIR   = RAG_DIR / "runs"
 CONFIG_ENV = RAG_DIR / "config.env"
 CLI_PY     = RAG_DIR / "cli.py"
-VIZ_PY     = SCRIPT_DIR / "viz.py"
+VIZ_PY     = SCRIPT_DIR / "analyticsVizs.py"
 
 sys.path.insert(0, str(RAG_DIR))   # for importing runner helpers
 
@@ -225,10 +225,20 @@ def run_one(cfg: dict, batch_label: str, difficulty: str, top_k: str) -> dict:
 
 # ── Post-batch: move, viz, commit ─────────────────────────────────────────────
 
-def post_batch(batch_label: str) -> None:
-    dest = SCRIPT_DIR / batch_label
+def _batch_dest(batch_label: str) -> Path:
+    """local-local goes directly in analytics/; haiku-* go in analytics/haikuPermutations/."""
+    if batch_label == "local-local":
+        return SCRIPT_DIR / batch_label
+    haiku_dir = SCRIPT_DIR / "haikuPermutations"
+    haiku_dir.mkdir(exist_ok=True)
+    return haiku_dir / batch_label
 
-    print(f"\n[post-batch] Moving runs/ -> analytics/{batch_label}/")
+
+def post_batch(batch_label: str) -> None:
+    dest = _batch_dest(batch_label)
+    rel  = dest.relative_to(SCRIPT_DIR.parent)  # analytics/haikuPermutations/label or analytics/label
+
+    print(f"\n[post-batch] Moving runs/ -> {rel}/")
     if dest.exists():
         print(f"  WARNING: {dest} already exists — merging into it")
     dest.mkdir(exist_ok=True)
@@ -243,16 +253,16 @@ def post_batch(batch_label: str) -> None:
             moved += 1
     print(f"  Moved {moved} items")
 
-    print(f"\n[post-batch] Running viz.py on analytics/{batch_label}/")
+    print(f"\n[post-batch] Running analyticsVizs.py on {rel}/")
     viz_rc = subprocess.run(
         [sys.executable, str(VIZ_PY), str(dest)],
         cwd=str(SCRIPT_DIR),
     ).returncode
     if viz_rc != 0:
-        print(f"  WARNING: viz.py returned {viz_rc}")
+        print(f"  WARNING: analyticsVizs.py returned {viz_rc}")
 
-    print(f"\n[post-batch] Committing analytics/{batch_label}/")
-    subprocess.run(["git", "add", f"analytics/{batch_label}/"], cwd=str(REPO_DIR))
+    print(f"\n[post-batch] Committing {rel}/")
+    subprocess.run(["git", "add", str(dest)], cwd=str(REPO_DIR))
     subprocess.run([
         "git", "commit", "-m",
         f"add batch {batch_label}: easy/medium/hard x50 runs + viz snapshot\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
@@ -275,7 +285,7 @@ def post_all() -> None:
 
     print("\n[post-all] Committing merged master")
     subprocess.run(["git", "add", "analytics/merged_master.xlsx",
-                    "analytics/merged/"], cwd=str(REPO_DIR))
+                    "analytics/haikuPermutations/"], cwd=str(REPO_DIR))
     subprocess.run([
         "git", "commit", "-m",
         "add merged_master.xlsx and merged viz across all 4 conditions\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",
@@ -320,10 +330,11 @@ def main() -> None:
         label = batch["label"]
 
         # Skip if already done
-        if (SCRIPT_DIR / label).exists():
-            existing = list((SCRIPT_DIR / label).glob("run_*.xlsx"))
+        dest = _batch_dest(label)
+        if dest.exists():
+            existing = list(dest.glob("run_*.xlsx"))
             if len(existing) >= 3:
-                print(f"\n[skip] analytics/{label}/ already has {len(existing)} run files — skipping batch")
+                print(f"\n[skip] {dest.relative_to(SCRIPT_DIR.parent)}/ already has {len(existing)} run files — skipping batch")
                 continue
 
         print(f"\n{'#'*60}")
