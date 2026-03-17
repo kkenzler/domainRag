@@ -234,18 +234,22 @@ def run_one(cfg: dict, batch_label: str, difficulty: str, top_k: str) -> dict:
 
 # ── Post-batch: move, viz, commit ─────────────────────────────────────────────
 
-def _batch_dest(batch_label: str) -> Path:
-    """local-local goes directly in analytics/; [MODEL]-* go in analytics/[MODEL]Permutations/."""
+def _batch_dest(batch_label: str, corpus: str) -> Path:
+    """Returns the archive folder for a batch run.
+
+    local-local  → analytics/{corpus}_local-local/
+    model-*      → analytics/[MODEL]Permutations/{corpus}_{batch_label}/
+    """
     if batch_label == "local-local":
-        return SCRIPT_DIR / batch_label
+        return SCRIPT_DIR / f"{corpus}_local-local"
     model_dir = SCRIPT_DIR / f"{MODEL}Permutations"
     model_dir.mkdir(exist_ok=True)
-    return model_dir / batch_label
+    return model_dir / f"{corpus}_{batch_label}"
 
 
-def post_batch(batch_label: str) -> None:
-    dest = _batch_dest(batch_label)
-    rel  = dest.relative_to(SCRIPT_DIR.parent)  # analytics/haikuPermutations/label or analytics/label
+def post_batch(batch_label: str, corpus: str) -> None:
+    dest = _batch_dest(batch_label, corpus)
+    rel  = dest.relative_to(SCRIPT_DIR.parent)
 
     print(f"\n[post-batch] Moving runs/ -> {rel}/")
     if dest.exists():
@@ -335,11 +339,15 @@ def main() -> None:
 
     cfg = load_config()
 
+    # Derive corpus name from DOMAIN_DIR basename (e.g. "example1", "clientA")
+    corpus = Path(cfg.get("DOMAIN_DIR", "unknown")).name or "unknown"
+    print(f"  Corpus:   {corpus}  (from DOMAIN_DIR basename)")
+
     for batch in BATCHES[start_idx:]:
         label = batch["label"]
 
         # Skip if already done
-        dest = _batch_dest(label)
+        dest = _batch_dest(label, corpus)
         if dest.exists():
             existing = list(dest.glob("run_*.xlsx"))
             if len(existing) >= 3:
@@ -347,7 +355,7 @@ def main() -> None:
                 continue
 
         print(f"\n{'#'*60}")
-        print(f"# STARTING BATCH: {label}")
+        print(f"# STARTING BATCH: {label}  (corpus: {corpus})")
         print(f"# GENERATE_PROVIDER={batch['GENERATE_PROVIDER']}  REVIEW_PROVIDER={batch['REVIEW_PROVIDER']}")
         print(f"{'#'*60}")
 
@@ -368,7 +376,7 @@ def main() -> None:
             status = "OK" if r["rc"] == 0 else f"ERROR({r['rc']})"
             print(f"  {d['DIFFICULTY_TARGET']:8s}  {r['run_id']}  {r['duration']}  {status}")
 
-        post_batch(label)
+        post_batch(label, corpus)
 
     post_all()
 
