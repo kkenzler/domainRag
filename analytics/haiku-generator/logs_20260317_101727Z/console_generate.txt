@@ -1,0 +1,197 @@
+
+[03:17:27] Generating item_1...
+    [03:18:06] Done in 36.5s
+
+[03:18:06] Generating item_2...
+    [03:18:35] Done in 26.3s
+
+[03:18:35] Generating item_3...
+    [03:19:44] Done in 66.6s
+
+[03:19:44] Generating item_4...
+    [03:20:27] Done in 41.3s
+
+[03:20:27] Generating item_5...
+    [03:21:12] Done in 42.2s
+
+[03:21:12] Generating item_6...
+    [03:22:09] Done in 55.0s
+
+[03:22:09] Generating item_7...
+    [03:22:49] Done in 37.1s
+
+[03:22:49] Generating item_8...
+    [03:23:22] Done in 31.5s
+
+[03:23:22] Generating item_9...
+    [03:24:32] Done in 67.7s
+
+[03:24:32] Generating item_10...
+    [03:25:09] Done in 33.8s
+
+[03:25:09] Generating item_11...
+    [03:25:51] Done in 39.9s
+
+[03:25:51] Generating item_12...
+    [03:26:29] Done in 36.0s
+
+[03:26:29] Generating item_13...
+    [03:27:10] Done in 39.0s
+
+[03:27:10] Generating item_14...
+    [03:27:39] Done in 26.6s
+
+[03:27:39] Generating item_15...
+    [03:28:35] Done in 53.5s
+
+[03:28:35] Generating item_16...
+    [03:28:56] Done in 18.2s
+
+[03:28:56] Generating item_17...
+    [03:29:35] Done in 36.7s
+
+[03:29:35] Generating item_18...
+    [03:30:17] Done in 39.7s
+
+[03:30:17] Generating item_19...
+    [03:30:57] Done in 37.9s
+
+[03:30:57] Generating item_20...
+    [03:31:40] Done in 40.4s
+
+[03:31:40] Generating item_21...
+    [03:32:16] Done in 33.8s
+
+[03:32:16] Generating item_22...
+    [03:33:40] Done in 81.7s
+
+[03:33:40] Generating item_23...
+    [03:34:00] Done in 18.0s
+
+[03:34:00] Generating item_24...
+    [03:34:39] Done in 37.0s
+
+[03:34:39] Generating item_25...
+    [03:35:07] Done in 25.3s
+
+[03:35:07] Generating item_26...
+    [03:35:46] Done in 36.6s
+
+[03:35:46] Generating item_27...
+    [03:36:15] Done in 26.4s
+
+[03:36:15] Generating item_28...
+    [03:36:43] Done in 25.8s
+
+[03:36:43] Generating item_29...
+    [03:37:21] Done in 36.0s
+
+[03:37:21] Generating item_30...
+    [03:37:45] Done in 21.4s
+
+[03:37:45] Generating item_31...
+    [03:38:15] Done in 27.9s
+
+[03:38:15] Generating item_32...
+    [03:39:28] Done in 70.7s
+
+[03:39:28] Generating item_33...
+    [03:40:08] Done in 37.2s
+
+[03:40:08] Generating item_34...
+    [03:41:01] Done in 51.3s
+
+[03:41:01] Generating item_35...
+    [03:41:32] Done in 28.0s
+
+[03:41:32] Generating item_36...
+    [03:42:02] Done in 28.0s
+
+[03:42:02] Generating item_37...
+    [03:42:55] Done in 51.3s
+
+[03:42:55] Generating item_38...
+    [03:43:25] Done in 26.9s
+
+[03:43:25] Generating item_39...
+    [03:43:47] Done in 20.0s
+
+[03:43:47] Generating item_40...
+    [03:44:25] Done in 35.8s
+
+[03:44:25] Generating item_41...
+    [03:44:58] Done in 30.0s
+
+[03:44:58] Generating item_42...
+    [03:45:24] Done in 23.8s
+
+[03:45:24] Generating item_43...
+    [03:45:45] Done in 19.5s
+
+[03:45:45] Generating item_44...
+    [03:46:12] Done in 24.8s
+
+[03:46:12] Generating item_45...
+    [03:46:31] Done in 16.2s
+
+[03:46:31] Generating item_46...
+    [03:47:00] Done in 26.8s
+
+[03:47:00] Generating item_47...
+    [03:47:32] Done in 29.3s
+
+[03:47:32] Generating item_48...
+    [03:48:01] Done in 26.6s
+
+[03:48:01] Generating item_49...
+    [03:48:31] Done in 28.6s
+
+[03:48:31] Generating item_50...
+    [03:49:11] Done in 37.5s
+Timing: gen=1788.4s  review=1503.0s
+STARTUP
+python_exe=C:\Users\kadek\AppData\Local\Python\pythoncore-3.14-64\python.exe
+program_root=C:\Users\kadek\source\repos\domainRag\_rag_testGen
+cmd=generate
+rag_root=C:\Users\kadek\source\repos\domainRag\_rag_testGen
+domain_dir=C:\Users\kadek\source\repos\domainRag\example1
+db_dsn=postgresql://postgres:***@localhost:5435/kinaxis_ragtestdb
+lm_url=http://localhost:1234
+
+--------------- local lane ---------------
+context_model=qwen/qwen2.5-vl-7b-instruct
+generator_model=qwen2.5-7b-instruct-uncensored
+review_model=qwen2.5-7b-instruct-uncensored
+embed_model=text-embedding-nomic-embed-text-v1.5@q8_0
+
+--------------- api lane ---------------
+api_provider=anthropic
+api_model=claude-haiku-4-5-20251001
+
+--------------- routing ---------------
+ingest=local -> lmstudio/qwen/qwen2.5-vl-7b-instruct
+generate=api -> anthropic/claude-haiku-4-5-20251001
+review=local -> lmstudio/qwen2.5-7b-instruct-uncensored
+
+--------------- run ---------------
+n_items=50
+run_id=20260317_101727Z
+prompts_dir=C:\Users\kadek\source\repos\domainRag\_rag_testGen\_prompts
+out_dir=C:\Users\kadek\source\repos\domainRag\_rag_testGen\runs
+force_ingest=False
+ingest_only=False
+baseline_mode=False
+checkpoint_chunks=False
+checkpoint_items=False
+checkpoint_review=False
+
+GENERATE_SUMMARY
+run_id=20260317_101727Z
+mode=rag
+condition_label=haiku-generator
+items_total=50
+items_schema_ok=50
+reviewer_json_ok=50
+reviewer_schema_ok=50
+decisions={'ACCEPT': 26, 'REVISE': 24}
+files={'xlsx': 'C:\\Users\\kadek\\source\\repos\\domainRag\\_rag_testGen\\runs\\run_20260317_101727Z.xlsx', 'manifest_json': 'C:\\Users\\kadek\\source\\repos\\domainRag\\_rag_testGen\\runs\\run_manifest_20260317_101727Z.json'}
