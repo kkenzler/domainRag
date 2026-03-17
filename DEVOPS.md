@@ -220,6 +220,42 @@ for 230 pages).
 
 ---
 
+## Session 14 Findings — Scale Runs + Reviewer Architecture
+
+### Scale Run Results (50 items each, local reviewer = qwen2.5-7b-uncensored)
+
+| Difficulty | Schema OK | Difficulty Match | Auto-Accept | REVISE/REJECT |
+|---|---|---|---|---|
+| Easy ×50 | 49/50 (98%) | 49/50 (98%) | 26 (52%) | 24 |
+| Medium ×50 | 50/50 (100%) | 50/50 (100%) | 20 (40%) | 30 |
+| Hard ×50 | 50/50 (100%) | 50/50 (100%) | 6 (12%) | 44 |
+
+### Root Cause — Local Reviewer Unreliable
+
+qwen2.5-7b-uncensored reviewing its own output is not independent critique:
+- Same model generates AND reviews → not independent
+- Consistently flags `INCOMPLETE_CONTEXT` even for well-formed questions
+- Inconsistent: some ACCEPT decisions contain REVISE-sounding reason codes
+- Hard questions hit 12% accept — reviewer adds noise, not signal
+
+### Fix — Route REVIEW_PROVIDER=api
+
+`API_PROVIDER=anthropic`, `API_MODEL=claude-haiku-4-5-20251001` already configured.
+Setting `REVIEW_PROVIDER=api` routes reviewer to Claude Haiku (~$0.10-0.15 per 150 items).
+Generation stays local (free). Haiku reviewer will provide meaningful, independent assessment.
+**Next session: change REVIEW_PROVIDER=local → api, re-run scale batches.**
+
+### Difficulty Control — Validation Findings (2026-03-16 session 14)
+
+- `DIFFICULTY_TARGET` env var injected into `generator_user.txt` via `{{DIFFICULTY}}` placeholder
+- `TOP_K` and `MAX_CONTEXT_CHARS_GEN` are runtime-overridable via env/config.env
+- Hard questions: `TOP_K=12`, `MAX_CONTEXT_CHARS_GEN=6000` used for scale runs
+- Easy/medium: `TOP_K=6` (default), `MAX_CONTEXT_CHARS_GEN=3000` (default) — both PASS at 60% accept
+- Hard: consistently ~0-40% auto-accept. Root cause: model drifts toward implied relationships between chunks rather than staying on explicit text. This is a known model limitation (qwen2.5-7b). Reviewer correctly catches these. Expected human review burden for hard: ~60% of items flagged for checkpoint 3.
+- Assessor script: `assess_run.py` — auto-finds most recent XLSX, prints item/reviewer summary, PASS/FAIL verdict
+
+---
+
 ## Current Known State
 
 - `runner.py` implemented and working; BAT/SH are thin shims
@@ -233,36 +269,79 @@ for 230 pages).
 - Vision page batching implemented (`vision_pages_per_batch=4`) to respect LM Studio context limits
 - LM Studio context window must be set to 32768+ for vision model to handle 4-page batches
 - MuPDF structural warnings suppressed via `fitz.TOOLS.mupdf_display_errors(False)`
-- XLSX output unchanged: Run Metadata, DB Snapshot, Chunk Preview, Items, Reviewer Decisions,
+- XLSX output: Run Metadata, DB Snapshot, Chunk Preview, Items, Reviewer Decisions,
   Traceability, Quality Metrics sheets
-- No full successful pipeline run completed yet (all attempts hit vision performance wall)
-- Generator/reviewer output quality unvalidated end-to-end
+- **58 chunks in DB** from prior ingest run (all 11 docs in example1, via Anthropic API) — confirmed 2026-03-16
+- `config.env` paths updated to `C:\Users\kadek\source\repos\domainRag\` — were pointing to old KinaxisCapstone path
+- Generator/reviewer output quality unvalidated end-to-end — first G mode run pending
 
 ---
 
 ## Still To Do — Priority Order
 
-### HIGH PRIORITY: End-to-End Validation
+### HIGH: Switch REVIEW_PROVIDER to API (Claude Haiku)
 
-Complete a full pipeline run with:
-- PDFs routed to Anthropic API
-- PPTX via local text model
-- N_ITEMS=5, checkpoint all three stages
-- Review XLSX output for chunk quality, item quality, reviewer scores
+Local reviewer (qwen2.5-7b) is not independent and adds noise. Route to Claude Haiku:
+  - Set `REVIEW_PROVIDER=api` in config.env (or via runner settings update)
+  - Cost: ~$0.10-0.15 per 150 items — negligible
+  - Re-run easy/medium/hard ×50 to establish valid accept-rate baselines
+  - Generation stays local (free); only review hits the API
 
-### HIGH PRIORITY: Competency Tagging
+### DONE: First G-Mode Scale Runs
 
-Add `competency` / `learning_objective` field to generator output schema and XLSX Items sheet.
-Currently not in generator prompt or output.
+Easy/medium/hard ×50 completed 2026-03-16. Chunks OK, difficulty control working.
+Local reviewer unreliable — see Session 14 Findings above. Re-run with API reviewer needed.
 
-### MEDIUM PRIORITY: Research Condition Comparison
+### HIGH: Competency / Section Tagging
 
-Implement multiple condition runs:
+Add `competency` and `source_section` fields to generator output schema, generator prompt, and XLSX Items sheet.
+This is the foundation for coverage tracking and distribution control.
+- Generator prompt: instruct model to tag each item with competency area drawn from context
+- `text_utils.py`: add fields to schema validation
+- `pipeline.py`: pass through to XLSX Items sheet
+
+### MEDIUM: Knowledge Coverage Tracking
+
+Ensure test items are distributed across logical sections of domain knowledge.
+Depends on: competency tagging.
+- Track which chunks have been used as retrieval seeds across items in a run
+- Add Coverage sheet to XLSX (competency × chunk_count × items_generated)
+- Flag under-represented competencies at checkpoint 2
+
+### MEDIUM: Difficulty Proportion Control
+
+Currently difficulty is declared by the generator but not controlled by the caller.
+- Add `DIFFICULTY_TARGET` config param (easy | medium | hard | any; default: any)
+- Inject target difficulty into generator_user.txt: "Generate a {difficulty} question…"
+- Add `DIFFICULTY_DISTRIBUTION` param (e.g. "30/50/20") for multi-item runs
+- Generation loop: rotate through difficulty targets to hit the requested distribution
+- Coverage sheet: add difficulty × competency breakdown
+
+### MEDIUM: Research Condition Comparison
+
+Multiple condition runs for RQ1/RQ2:
 - RAG + critic (current)
 - RAG + no critic
 - No-RAG + critic (baseline mode exists)
 - No-RAG + no critic
-Store condition label in XLSX metadata for side-by-side analysis.
+Store `CONDITION_LABEL` in XLSX Run Metadata sheet for side-by-side analysis.
+
+### LOW: Question Format Variants
+
+Currently only standard 4-option MCQ (a/b/c/d). Planned variants:
+- **Select-N-of-M** (e.g. "select 2 of 5"): requires different prompt contract and XLSX schema
+- **Binned / categorization**: match concepts to categories; different prompt template entirely
+- **Fill-in-the-blank**: gap-fill items; different output contract
+Implementation: one prompt template file per format type; `FORMAT` config param; format-specific
+schema validator in `text_utils.py`. Each format is independent — add one at a time.
+Prerequisite: first run validated and competency tagging in place.
+
+### LOW: User / LLM Interaction Layer
+
+Currently completely absent — pipeline runs batch, no real-time dialogue.
+Required for Kinaxis deliverables. Likely a new run mode (`C = Chat / interactive`).
+Options: CLI REPL, minimal web UI (Flask/FastAPI), or structured chat loop.
+Scope TBD — design after all other features validated.
 
 ---
 

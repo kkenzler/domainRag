@@ -1,14 +1,18 @@
-Generate exactly one multiple-choice question grounded only in the provided context.
+Generate exactly one {{DIFFICULTY}} multiple-choice question grounded only in the provided context.
 
 Rules:
 
 Use ONLY facts that appear explicitly in the context.
+
+For hard questions: combine or compare concepts that both appear in the context — do not invent scenarios or details beyond what is provided. Every element of the question and correct answer must be directly traceable to a specific passage in the context.
 
 If the context is insufficient to write a valid grounded item, write the best grounded item you can and keep it generic; do not invent details.
 
 Do not mention the context or citations in the output.
 
 Follow the output contract exactly (labels and formatting).
+
+Set difficulty: {{DIFFICULTY}}
 
 Context:
 {{CONTEXT}}

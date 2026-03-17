@@ -7,3 +7,15 @@ c) ...
 d) ...
 correct_key: A|B|C|D
 difficulty: easy|medium|hard
+
+Difficulty definitions (match the requested difficulty exactly):
+  easy   — recall and recognition: definitions, direct facts, "what is X" questions
+  medium — application and comprehension: applying a concept or formula to a scenario
+  hard   — analysis and synthesis: multi-step reasoning, trade-off evaluation, integrating multiple concepts
+
+Distractor rules (critical — reviewer will reject weak distractors):
+  - Each wrong answer must sound plausible and be related to the topic
+  - Each wrong answer must contain a specific factual error or misapplication that makes it unambiguously incorrect
+  - Do NOT use obviously absurd, unrelated, or trivially wrong options
+  - Do NOT use "all of the above" or "none of the above"
+  - Distractors should represent common misconceptions or reasonable but incorrect alternatives
