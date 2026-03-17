@@ -749,7 +749,12 @@ def generate_from_db(cfg: GenerateConfig) -> dict[str, Any]:
                 context_parts.append(f"[{j+1}] {r.get('chunk_text', '')}")
             context_block = _cap_text("\n\n".join(context_parts), max_context_chars)
 
-            generator_user = generator_user_template.replace("{{CONTEXT}}", context_block)
+            difficulty_target = (os.environ.get("DIFFICULTY_TARGET") or "medium").strip().lower()
+            generator_user = (
+                generator_user_template
+                .replace("{{DIFFICULTY}}", difficulty_target)
+                .replace("{{CONTEXT}}", context_block)
+            )
 
             _gen_provider = "lmstudio" if cfg.generate_provider == "local" else cfg.generate_provider
             t0 = time.perf_counter()
@@ -993,7 +998,12 @@ def generate_baseline(cfg: BaselineConfig) -> dict[str, Any]:
         item_id = f"item_{i+1}"
         print(f"Generating baseline {item_id}...", file=sys.stderr, flush=True)
 
-        generator_user = generator_user_template.replace("{{CONTEXT}}", full_context)
+        difficulty_target = (os.environ.get("DIFFICULTY_TARGET") or "medium").strip().lower()
+        generator_user = (
+            generator_user_template
+            .replace("{{DIFFICULTY}}", difficulty_target)
+            .replace("{{CONTEXT}}", full_context)
+        )
 
         t0 = time.perf_counter()
         gen_raw = call_llm(
