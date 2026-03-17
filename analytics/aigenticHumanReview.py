@@ -1,10 +1,13 @@
 """
-claude_review.py — Claude Human Review helper for merged_master.xlsx
+aigenticHumanReview.py — Agentic Human Review helper for merged_master.xlsx
+
+Exports items for review, appends scored decisions, and writes
+the "Claude Review" sheet back to merged_master.xlsx.
 
 Usage:
-  python claude_review.py --export               # dump items + chunks to claude_review_input.json
-  python claude_review.py --write                # write claude_review_decisions.json → "Claude Review" sheet
-  python claude_review.py --status               # show progress (how many decisions made so far)
+  python aigenticHumanReview.py --export               # dump items + chunks to claude_review_input.json
+  python aigenticHumanReview.py --write                # write claude_review_decisions.json → "Claude Review" sheet
+  python aigenticHumanReview.py --status               # show progress (how many decisions made so far)
 """
 
 import argparse
@@ -15,9 +18,10 @@ from pathlib import Path
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 
-XLSX_PATH = Path(__file__).parent / "merged_master.xlsx"
-INPUT_JSON = Path(__file__).parent / "claude_review_input.json"
-DECISIONS_JSON = Path(__file__).parent / "claude_review_decisions.json"
+XLSX_PATH      = Path(__file__).parent / "merged_master.xlsx"
+_REVIEW_DIR    = Path(__file__).parent / "claude-review" / "claude-review-batching"
+INPUT_JSON     = _REVIEW_DIR / "claude_review_input.json"
+DECISIONS_JSON = _REVIEW_DIR / "claude_review_decisions.json"
 
 REVIEW_SHEET = "Claude Review"
 

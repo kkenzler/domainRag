@@ -6,9 +6,9 @@ Per-batch mode:
     python viz.py                     # default: ../_rag_testGen/runs
 
 Merged mode:
-    python viz.py --merged merged_master.xlsx
+    python analyticsVizs.py --merged merged_master.xlsx
     Reads merged_master.xlsx, produces 4-condition comparison charts
-    Output: analytics/merged/dashboard.png + analytics/merged/charts/
+    Output: analytics/haikuPermutations/dashboard.png + analytics/haikuPermutations/charts/
 
 Per-batch output: analytics/<runs_dir_parent>/charts/ + dashboard.png
 """
@@ -1001,6 +1001,84 @@ def cr_reject_breakdown(ax, by_cond: dict):
               title="Difficulty", title_fontsize=8)
 
 
+def cr_score_boxplot(ax, by_cond: dict, metric: str, title: str):
+    """Boxplot of a score field distribution by condition."""
+    conds = list(by_cond.keys())
+    data  = [[it[metric] for it in by_cond[c] if it[metric] is not None] for c in conds]
+    bp = ax.boxplot(data, patch_artist=True, medianprops={"color": "#FFB300", "linewidth": 2})
+    for patch, c in zip(bp["boxes"], conds):
+        patch.set_facecolor(COND_COLORS.get(c, "#78909c"))
+        patch.set_alpha(0.7)
+    for element in ("whiskers", "caps", "fliers"):
+        for item in bp[element]:
+            item.set_color(TEXT_COL)
+    ax.set_xticks(range(1, len(conds) + 1))
+    ax.set_xticklabels([c.replace("/", "/\n") for c in conds], fontsize=8)
+    ax.set_ylim(0.5, 5.5)
+    ax.set_yticks([1, 2, 3, 4, 5])
+    style_ax(ax, title, "Score (1–5)")
+
+
+def cr_radar_by_condition(ax, by_cond: dict):
+    """Radar chart: mean alignment / distractor / clarity / agreement / pass-rate by condition."""
+    metrics = [
+        ("claude_source_alignment",   "Alignment\n(1–5)"),
+        ("claude_distractor_quality", "Distractor\n(1–5)"),
+        ("claude_stem_clarity",       "Clarity\n(1–5)"),
+    ]
+    # Normalise each metric to 0–1 range (1-5 → 0-1)
+    conds = list(by_cond.keys())
+    cats  = [lab for _, lab in metrics]
+    N     = len(cats)
+    angles = [n / N * 2 * pi for n in range(N)] + [0]
+
+    ax.set_facecolor(AXIS_BG)
+    ax.set_theta_offset(pi / 2)
+    ax.set_theta_direction(-1)
+    ax.set_xticks(angles[:-1])
+    ax.set_xticklabels(cats, color=TEXT_COL, fontsize=8)
+    ax.set_yticks([0.25, 0.5, 0.75, 1.0])
+    ax.set_yticklabels(["1.5", "2.5", "3.5", "4.5"], color=TEXT_COL, fontsize=6)
+    ax.set_ylim(0, 1)
+    ax.grid(color=GRID_COL, linewidth=0.6)
+    ax.spines["polar"].set_edgecolor(GRID_COL)
+
+    for c in conds:
+        vals = []
+        for field, _ in metrics:
+            raw = [it[field] for it in by_cond[c] if it[field] is not None]
+            vals.append((np.mean(raw) - 1) / 4 if raw else 0)
+        vals += [vals[0]]
+        ax.plot(angles, vals, linewidth=2, color=COND_COLORS.get(c, "#78909c"), label=c)
+        ax.fill(angles, vals, alpha=0.15, color=COND_COLORS.get(c, "#78909c"))
+    ax.set_title("Score Radar by Condition", color=TITLE_COL, fontsize=11,
+                 fontweight="bold", pad=18)
+    ax.legend(loc="lower left", bbox_to_anchor=(-0.25, -0.12), fontsize=7,
+              labelcolor=TEXT_COL, framealpha=0.2)
+
+
+def cr_accept_vs_match(ax, by_cond: dict):
+    """Grouped bar: ACCEPT rate vs difficulty_match rate by condition."""
+    conds = list(by_cond.keys())
+    x = np.arange(len(conds))
+    w = 0.32
+    accept_rates = [sum(1 for it in by_cond[c] if it["claude_decision"] == "ACCEPT")
+                    / len(by_cond[c]) * 100 for c in conds]
+    match_rates  = [sum(1 for it in by_cond[c] if it.get("claude_difficulty_match") is True)
+                    / len(by_cond[c]) * 100 for c in conds]
+    bars1 = ax.bar(x - w / 2, accept_rates, w, label="ACCEPT %", color="#4CAF50")
+    bars2 = ax.bar(x + w / 2, match_rates,  w, label="Difficulty Match %", color="#29b6f6")
+    for bars, vals in [(bars1, accept_rates), (bars2, match_rates)]:
+        for bar, v in zip(bars, vals):
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.8,
+                    f"{v:.0f}%", ha="center", va="bottom", color=TEXT_COL, fontsize=8)
+    ax.set_xticks(x)
+    ax.set_xticklabels([c.replace("/", "/\n") for c in conds], fontsize=8)
+    ax.set_ylim(0, 115)
+    style_ax(ax, "ACCEPT Rate vs Difficulty Match", "% of items")
+    ax.legend(fontsize=8, labelcolor=TEXT_COL, framealpha=0.2)
+
+
 def run_claude_review_mode(decisions_json: Path, out_dir: Path) -> None:
     out_dir.mkdir(exist_ok=True)
     charts_dir = out_dir / "charts"
@@ -1012,18 +1090,29 @@ def run_claude_review_mode(decisions_json: Path, out_dir: Path) -> None:
     print(f"  {len(items)} items across {len(by_cond)} conditions")
 
     CHART_SPECS = [
-        ("01_decisions_by_condition",  lambda ax: cr_decisions_bar(ax, by_cond),      8, 5.5),
-        ("02_scores_by_condition",     lambda ax: cr_score_bars(ax, by_cond),          9, 5.5),
-        ("03_agreement_with_reviewer", lambda ax: cr_agreement_bar(ax, by_cond),       8, 5.5),
-        ("04_flag_rate",               lambda ax: cr_flag_bar(ax, by_cond),            7, 5.0),
-        ("05_decision_heatmap",        lambda ax: cr_decision_heatmap(ax, items),      7, 4.5),
-        ("06_score_heatmap",           lambda ax: cr_score_heatmap(ax, by_cond),       7, 4.5),
-        ("07_qc_flags",                lambda ax: cr_qc_flags_bar(ax, by_cond),       10, 5.5),
-        ("08_reject_breakdown",        lambda ax: cr_reject_breakdown(ax, by_cond),    9, 5.5),
+        ("01_decisions_by_condition",  lambda ax: cr_decisions_bar(ax, by_cond),       8, 5.5, False),
+        ("02_scores_by_condition",     lambda ax: cr_score_bars(ax, by_cond),           9, 5.5, False),
+        ("03_agreement_with_reviewer", lambda ax: cr_agreement_bar(ax, by_cond),        8, 5.5, False),
+        ("04_flag_rate",               lambda ax: cr_flag_bar(ax, by_cond),             7, 5.0, False),
+        ("05_decision_heatmap",        lambda ax: cr_decision_heatmap(ax, items),       7, 4.5, False),
+        ("06_score_heatmap",           lambda ax: cr_score_heatmap(ax, by_cond),        7, 4.5, False),
+        ("07_qc_flags",                lambda ax: cr_qc_flags_bar(ax, by_cond),        10, 5.5, False),
+        ("08_reject_breakdown",        lambda ax: cr_reject_breakdown(ax, by_cond),     9, 5.5, False),
+        ("09_alignment_boxplot",       lambda ax: cr_score_boxplot(ax, by_cond,
+                                           "claude_source_alignment",
+                                           "Source Alignment Distribution"),             8, 5.5, False),
+        ("10_distractor_boxplot",      lambda ax: cr_score_boxplot(ax, by_cond,
+                                           "claude_distractor_quality",
+                                           "Distractor Quality Distribution"),           8, 5.5, False),
+        ("11_clarity_boxplot",         lambda ax: cr_score_boxplot(ax, by_cond,
+                                           "claude_stem_clarity",
+                                           "Stem Clarity Distribution"),                 8, 5.5, False),
+        ("12_radar_by_condition",      lambda ax: cr_radar_by_condition(ax, by_cond),   7, 6.0, True),
+        ("13_accept_vs_match",         lambda ax: cr_accept_vs_match(ax, by_cond),      8, 5.5, False),
     ]
 
-    for slug, fn, w, h in CHART_SPECS:
-        fig, ax = plt.subplots(figsize=(w, h))
+    for slug, fn, w, h, polar in CHART_SPECS:
+        fig, ax = plt.subplots(figsize=(w, h), subplot_kw={"polar": True} if polar else {})
         fig.patch.set_facecolor(BG)
         fn(ax)
         path = charts_dir / f"{slug}.png"
@@ -1031,11 +1120,11 @@ def run_claude_review_mode(decisions_json: Path, out_dir: Path) -> None:
         plt.close(fig)
         print(f"  chart: {path.name}")
 
-    # Dashboard 2×4
-    fig = plt.figure(figsize=(22, 14))
+    # Dashboard 3×4 (12 charts — all except 13_accept_vs_match which shares the 3rd row)
+    fig = plt.figure(figsize=(28, 18))
     fig.patch.set_facecolor(BG)
-    gs = gridspec.GridSpec(2, 4, figure=fig, hspace=0.52, wspace=0.40,
-                           left=0.05, right=0.97, top=0.92, bottom=0.06)
+    gs = gridspec.GridSpec(3, 4, figure=fig, hspace=0.55, wspace=0.40,
+                           left=0.05, right=0.97, top=0.93, bottom=0.05)
     cr_decisions_bar(fig.add_subplot(gs[0, 0]), by_cond)
     cr_score_bars(fig.add_subplot(gs[0, 1]), by_cond)
     cr_agreement_bar(fig.add_subplot(gs[0, 2]), by_cond)
@@ -1044,8 +1133,14 @@ def run_claude_review_mode(decisions_json: Path, out_dir: Path) -> None:
     cr_score_heatmap(fig.add_subplot(gs[1, 1]), by_cond)
     cr_qc_flags_bar(fig.add_subplot(gs[1, 2]), by_cond)
     cr_reject_breakdown(fig.add_subplot(gs[1, 3]), by_cond)
+    cr_score_boxplot(fig.add_subplot(gs[2, 0]), by_cond,
+                     "claude_source_alignment", "Source Alignment Distribution")
+    cr_score_boxplot(fig.add_subplot(gs[2, 1]), by_cond,
+                     "claude_distractor_quality", "Distractor Quality Distribution")
+    cr_radar_by_condition(fig.add_subplot(gs[2, 2], polar=True), by_cond)
+    cr_accept_vs_match(fig.add_subplot(gs[2, 3]), by_cond)
     fig.suptitle(
-        "domainRag  —  Claude Human Review  (615 items  ·  4 conditions)",
+        "domainRag  —  Agentic Human Review  (615 items  ·  4 conditions)",
         color=TITLE_COL, fontsize=13, fontweight="bold", y=0.965,
     )
     dash = out_dir / "dashboard.png"
@@ -1076,7 +1171,7 @@ def main():
         run_claude_review_mode(decisions, out_dir)
     elif args.merged:
         master = Path(args.merged)
-        out_dir = script_dir / "merged"
+        out_dir = script_dir / "haikuPermutations"
         out_dir.mkdir(exist_ok=True)
         run_merged_mode(master, out_dir)
     else:
