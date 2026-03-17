@@ -5,16 +5,19 @@ Runs batches B, C, D (3 difficulties × 50 items each) back-to-back.
 Requires API key once at startup, then runs completely unattended.
 
 Batch conditions:
-  B  haiku-reviewer   generate=local   review=api
-  C  haiku-generator  generate=api     review=local
-  D  haiku-both       generate=api     review=api
+  B  [MODEL]-reviewer   generate=local   review=api
+  C  [MODEL]-generator  generate=api     review=local
+  D  [MODEL]-both       generate=api     review=api
 
-After each batch:  moves runs → analytics/<label>/  →  viz snapshot  →  git commit
-After all batches: merge_runs.py  →  git commit
+Set MODEL (below) to switch the API model for a new study run.
+Output lands in analytics/[MODEL]Permutations/.
+
+After each batch:  moves runs → analytics/[MODEL]Permutations/<label>/  →  viz snapshot
+After all batches: merge_runs.py
 
 Usage (from repo root or analytics/):
     python analytics/run_batches.py
-    python analytics/run_batches.py --start-batch haiku-generator   # resume from C
+    python analytics/run_batches.py --start-batch [MODEL]-generator   # resume from C
 """
 
 from __future__ import annotations
@@ -40,12 +43,18 @@ VIZ_PY     = SCRIPT_DIR / "analyticsVizs.py"
 
 sys.path.insert(0, str(RAG_DIR))   # for importing runner helpers
 
+# ── Model selection ────────────────────────────────────────────────────────────
+# Change this to switch the API model for a new study run.
+# Labels and output folder (analytics/[MODEL]Permutations/) update automatically.
+
+MODEL = "haiku"   # e.g. "haiku", "sonnet", "opus"
+
 # ── Batch definitions ─────────────────────────────────────────────────────────
 
 BATCHES = [
-    {"label": "haiku-reviewer",  "GENERATE_PROVIDER": "local", "REVIEW_PROVIDER": "api"},
-    {"label": "haiku-generator", "GENERATE_PROVIDER": "api",   "REVIEW_PROVIDER": "local"},
-    {"label": "haiku-both",      "GENERATE_PROVIDER": "api",   "REVIEW_PROVIDER": "api"},
+    {"label": f"{MODEL}-reviewer",  "GENERATE_PROVIDER": "local", "REVIEW_PROVIDER": "api"},
+    {"label": f"{MODEL}-generator", "GENERATE_PROVIDER": "api",   "REVIEW_PROVIDER": "local"},
+    {"label": f"{MODEL}-both",      "GENERATE_PROVIDER": "api",   "REVIEW_PROVIDER": "api"},
 ]
 
 DIFFICULTIES = [
@@ -226,12 +235,12 @@ def run_one(cfg: dict, batch_label: str, difficulty: str, top_k: str) -> dict:
 # ── Post-batch: move, viz, commit ─────────────────────────────────────────────
 
 def _batch_dest(batch_label: str) -> Path:
-    """local-local goes directly in analytics/; haiku-* go in analytics/haikuPermutations/."""
+    """local-local goes directly in analytics/; [MODEL]-* go in analytics/[MODEL]Permutations/."""
     if batch_label == "local-local":
         return SCRIPT_DIR / batch_label
-    haiku_dir = SCRIPT_DIR / "haikuPermutations"
-    haiku_dir.mkdir(exist_ok=True)
-    return haiku_dir / batch_label
+    model_dir = SCRIPT_DIR / f"{MODEL}Permutations"
+    model_dir.mkdir(exist_ok=True)
+    return model_dir / batch_label
 
 
 def post_batch(batch_label: str) -> None:
@@ -285,7 +294,7 @@ def post_all() -> None:
 
     print("\n[post-all] Committing merged master")
     subprocess.run(["git", "add", "analytics/merged_master.xlsx",
-                    "analytics/haikuPermutations/"], cwd=str(REPO_DIR))
+                    f"analytics/{MODEL}Permutations/"], cwd=str(REPO_DIR))
     subprocess.run([
         "git", "commit", "-m",
         "add merged_master.xlsx and merged viz across all 4 conditions\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",

@@ -3,8 +3,11 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
-# domainRag: generated run outputs (xlsx, manifests, logs) — keep analytics/ snapshots
+# domainRag: generated run outputs (xlsx, manifests, logs)
 _rag_testGen/runs/
+
+# analytics/ output — already-committed content stays; new runs not auto-staged
+analytics/
 
 # Client/confidential corpus folders — never commit
 _client_corpus/
