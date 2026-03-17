@@ -220,6 +220,87 @@ for 230 pages).
 
 ---
 
+## Session 15 Plan — Comparative Batch Study + Claude Human Review
+
+### Research Design
+
+4 conditions × 3 difficulties × 50 items = **600 total items** across all batches.
+
+| Batch | Label | Generate | Review | Status |
+|-------|-------|----------|--------|--------|
+| A | `3-16-26` | local Qwen 7B | local Qwen 7B | DONE — `analytics/3-16-26/` |
+| B | `haiku-reviewer` | local Qwen 7B | Claude Haiku API | in progress |
+| C | `haiku-generator` | Claude Haiku API | local Qwen 7B | pending |
+| D | `haiku-both` | Claude Haiku API | Claude Haiku API | pending |
+
+Each batch = easy + medium + hard × 50 items (9 total runs per session after batch A).
+Checkpoints: all OFF (`CHECKPOINT_CHUNKS=false`, `CHECKPOINT_ITEMS=false`, `CHECKPOINT_REVIEW=false`) for unattended runs.
+
+### Config per Batch
+
+**Batch B (haiku-reviewer)** — current config.env state:
+```
+GENERATE_PROVIDER=local
+REVIEW_PROVIDER=api
+API_PROVIDER=anthropic
+API_MODEL=claude-haiku-4-5-20251001
+```
+
+**Batch C (haiku-generator):**
+```
+GENERATE_PROVIDER=api
+REVIEW_PROVIDER=local
+```
+
+**Batch D (haiku-both):**
+```
+GENERATE_PROVIDER=api
+REVIEW_PROVIDER=api
+```
+
+### Per-Batch Workflow
+
+1. Run easy (DIFFICULTY_TARGET=easy), then medium, then hard in sequence
+2. Move completed runs folder to `analytics/[batch-label]/` (e.g. `analytics/haiku-reviewer/`)
+3. Run `viz.py [batch-dir]` to generate that batch's snapshot charts + dashboard
+4. Commit `analytics/[batch-label]/` to git
+
+### Post-All-Batches Workflow
+
+1. Run merge script (`analytics/merge_runs.py`) — combines all 4 batches' XLSX Items +
+   Reviewer Decisions + Traceability + Quality Metrics into `analytics/merged_master.xlsx`
+   with a `batch_label` column added to each row
+2. Run `viz.py --merged analytics/merged_master.xlsx` — multi-condition comparison charts
+3. Claude conducts "human review" (see below)
+
+### Claude Human Review
+
+Claude acts as the independent expert human reviewer. For each item across all batches:
+- Reads: question stem, answer choices, correct key, stated difficulty
+- Reads: source chunks from Traceability sheet (the actual retrieved context)
+- Scores each quality dimension:
+  - `source_alignment` (1-5): is the question answerable from the retrieved source material?
+  - `distractor_quality` (1-5): are wrong answers plausible but unambiguously wrong?
+  - `stem_clarity` (1-5): is the stem unambiguous, grammatically clean, no answer leaks?
+  - `difficulty_match` (True/False): does stated difficulty match cognitive demand?
+- Issues ACCEPT / REVISE / REJECT decision with written reasoning
+- Output: new "Claude Review" sheet added to each run XLSX and to merged_master.xlsx
+
+**Research value:** Claude review IS the human baseline for RQ2 (does agentic critique reduce
+human review burden?). Comparing Claude's decisions against Haiku reviewer (Batch B/D) tells
+us whether Haiku tracks human judgment. Comparing against local Qwen reviewer (Batch A/C)
+quantifies the noise cost of non-independent review.
+
+### viz.py — Required Extensions for Multi-Batch
+
+`analytics/viz.py` currently reads 3 fixed XLSX files (easy/medium/hard) from one runs dir.
+Extensions needed before or after merge:
+- `--merged` flag: accept merged_master.xlsx, group by `batch_label` for condition comparison
+- Additional charts: condition × quality metric, reviewer agreement rate vs Claude, cost comparison across all 4 conditions
+- Output to `analytics/[batch-label]/charts/` per batch, or `analytics/merged/` for cross-batch
+
+---
+
 ## Session 14 Findings — Scale Runs + Reviewer Architecture
 
 ### Scale Run Results (50 items each, local reviewer = qwen2.5-7b-uncensored)
@@ -279,18 +360,18 @@ Generation stays local (free). Haiku reviewer will provide meaningful, independe
 
 ## Still To Do — Priority Order
 
-### HIGH: Switch REVIEW_PROVIDER to API (Claude Haiku)
+### IN PROGRESS: Comparative Batch Study (Session 15)
 
-Local reviewer (qwen2.5-7b) is not independent and adds noise. Route to Claude Haiku:
-  - Set `REVIEW_PROVIDER=api` in config.env (or via runner settings update)
-  - Cost: ~$0.10-0.15 per 150 items — negligible
-  - Re-run easy/medium/hard ×50 to establish valid accept-rate baselines
-  - Generation stays local (free); only review hits the API
+See Session 15 Plan above. Batch A done. Batches B/C/D running overnight.
+- `REVIEW_PROVIDER=api` set in config.env — DONE
+- All checkpoints disabled for unattended runs — DONE
+- merge_runs.py not yet written — needed before Claude human review
+- viz.py multi-batch extensions not yet written — needed before merged viz
 
-### DONE: First G-Mode Scale Runs
+### DONE: First G-Mode Scale Runs + REVIEW_PROVIDER Fix
 
-Easy/medium/hard ×50 completed 2026-03-16. Chunks OK, difficulty control working.
-Local reviewer unreliable — see Session 14 Findings above. Re-run with API reviewer needed.
+Easy/medium/hard ×50 completed 2026-03-16 (Batch A, local/local). Chunks OK, difficulty control working.
+Local reviewer unreliable — see Session 14 Findings. REVIEW_PROVIDER=api now set. Batch B running.
 
 ### HIGH: Competency / Section Tagging
 
