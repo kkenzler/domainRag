@@ -23,15 +23,18 @@ from openpyxl import Workbook
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
-# Ordered batch labels — determines sheet ordering and comparison axis
-BATCH_ORDER = ["local-local", "haiku-reviewer", "haiku-generator", "haiku-both"]
+# ── Model selection — must match run_batches.py ───────────────────────────────
+MODEL = "haiku"   # e.g. "haiku", "sonnet", "opus"
 
-# Map folder name → human-readable condition label
+# Ordered batch label suffixes — corpus prefix is discovered automatically
+BATCH_ORDER = ["local-local", f"{MODEL}-reviewer", f"{MODEL}-generator", f"{MODEL}-both"]
+
+# Map label suffix → human-readable condition label
 BATCH_LABELS = {
-    "local-local":      "local/local",
-    "haiku-reviewer":   "local/haiku",
-    "haiku-generator":  "haiku/local",
-    "haiku-both":       "haiku/haiku",
+    "local-local":          "local/local",
+    f"{MODEL}-reviewer":    f"local/{MODEL}",
+    f"{MODEL}-generator":   f"{MODEL}/local",
+    f"{MODEL}-both":        f"{MODEL}/{MODEL}",
 }
 
 # Sheets to merge (source sheet name → dest sheet name)
@@ -42,38 +45,46 @@ QM_SHEET = "Quality Metrics"
 
 
 def _batch_root(label: str) -> Path:
-    """Return the directory that contains a given batch label folder.
-    local-local lives directly in analytics/; haiku-* live in analytics/haikuPermutations/.
+    """Return the directory that contains corpus-prefixed batch folders.
+    local-local lives directly in analytics/; model-* live in analytics/[MODEL]Permutations/.
     """
     if label == "local-local":
         return SCRIPT_DIR
-    return SCRIPT_DIR / "haikuPermutations"
+    return SCRIPT_DIR / f"{MODEL}Permutations"
 
 
 def find_run_files() -> list[tuple[str, str, Path]]:
-    """Returns list of (batch_label, difficulty, xlsx_path)."""
+    """Returns list of (batch_label, difficulty, xlsx_path).
+
+    Batch folders may be corpus-prefixed (e.g. example1_haiku-reviewer),
+    so we glob for *_{label} rather than an exact folder name match.
+    """
     runs = []
     for label in BATCH_ORDER:
-        batch_dir = _batch_root(label) / label
-        if not batch_dir.is_dir():
+        parent = _batch_root(label)
+        if not parent.is_dir():
             continue
-        for xlsx in sorted(batch_dir.glob("run_*.xlsx")):
-            # Determine difficulty from the Items sheet
-            try:
-                wb   = openpyxl.load_workbook(xlsx, read_only=True, data_only=True)
-                ws   = wb["Items"]
-                hdrs = [c.value for c in next(ws.iter_rows(max_row=1))]
-                diff_idx = hdrs.index("difficulty") if "difficulty" in hdrs else None
-                difficulty = "unknown"
-                if diff_idx is not None:
-                    for row in ws.iter_rows(min_row=2, values_only=True):
-                        if row[0] and row[diff_idx]:
-                            difficulty = str(row[diff_idx])
-                            break
-                wb.close()
-            except Exception:
-                difficulty = "unknown"
-            runs.append((label, difficulty, xlsx))
+        # Glob for corpus-prefixed folders, e.g. example1_haiku-reviewer
+        for batch_dir in sorted(parent.glob(f"*_{label}")):
+            if not batch_dir.is_dir():
+                continue
+            for xlsx in sorted(batch_dir.glob("run_*.xlsx")):
+                # Determine difficulty from the Items sheet
+                try:
+                    wb   = openpyxl.load_workbook(xlsx, read_only=True, data_only=True)
+                    ws   = wb["Items"]
+                    hdrs = [c.value for c in next(ws.iter_rows(max_row=1))]
+                    diff_idx = hdrs.index("difficulty") if "difficulty" in hdrs else None
+                    difficulty = "unknown"
+                    if diff_idx is not None:
+                        for row in ws.iter_rows(min_row=2, values_only=True):
+                            if row[0] and row[diff_idx]:
+                                difficulty = str(row[diff_idx])
+                                break
+                    wb.close()
+                except Exception:
+                    difficulty = "unknown"
+                runs.append((label, difficulty, xlsx))
     return runs
 
 
