@@ -1,0 +1,299 @@
+=== ITEM 76 | 3-16-26 | diff=medium | 20260317_024849Z/item_11 ===
+Q: Which of the following statements correctly describes a key feature of the Wagner-Whitin model and its extension to capacity-constrained problems?
+A) The Wagner-Whitin model minimizes total cost by allowing negative inventory levels.
+B) In the ZICO policy, an order is placed only when inventory reaches zero in both models.
+C) The shortest path algorithm can solve the capacity-constrained problem in O(T ln T) time.
+D) The optimal solution to a capacity-constrained problem consists of sequences where production is either at full capacity or zero.
+Correct: D | Rev: REVISE align=3 dist=4 clarity=2 dm=False
+Reason: ["INCOMPLETE_CONTEXT", "MIXED_DIFFICULTY"]
+Chunks:
+  [dist=0] The Wagner-Whitin model for dynamic economic lot sizing without capacity constraints minimizes the sum of ordering costs and holding costs over a finite planning horizon. The model includes a fixed ordering cost K_t that is incurred whenever an order
+  [dist=0.559] Dynamic economic lot sizing with capacity constraints adds an upper bound C_t on the production quantity in each period, creating a more realistic model where production capacity is limited. A feasible solution exists if and only if the cumulative ca
+
+=== ITEM 77 | 3-16-26 | diff=medium | 20260317_024849Z/item_12 ===
+Q: How does the bullwhip effect in decentralized supply chains compare to centralized systems?
+A) It is less pronounced because each stage has access to actual customer demand.
+B) It is exacerbated due to forecasting errors and lead time uncertainties.
+C) It is mitigated by using sophisticated forecasting techniques at each stage.
+D) It is eliminated entirely when moving average smoothing parameters are used.
+Correct: B | Rev: REVISE align=3 dist=4 clarity=4 dm=False
+Reason: ["INCOMPLETE_CONTEXT", "MIXED_DIFFICULTY"]
+Chunks:
+  [dist=0] Under decentralized information, the increase in variability at stage k is Var(q^k)/σ² ≥ ∏(1 + 2L_i/p + 2L_i²/p²) for i from 1 to k. This multiplicative relationship shows that variability amplification compounds across stages in decentralized system
+  [dist=0.367] The bullwhip effect exists in part because retailers must estimate both the mean and variance of demand from limited historical observations. The increase in order variability is an increasing function of both the lead time L and the smoothing parame
+
+=== ITEM 78 | 3-16-26 | diff=medium | 20260317_024849Z/item_13 ===
+Q: Which of the following is NOT a key driver influencing strategic sourcing decisions in supply chain management?
+A) Customer satisfaction metrics
+B) Freight costs for transportation lanes
+C) Raw material costs including invoice and freight
+D) Variable manufacturing costs by process and site
+Correct: A | Rev: REVISE align=3 dist=4 clarity=4 dm=False
+Reason: ["INCOMPLETE_CONTEXT", "WRONG_DIFFICULTY"]
+Chunks:
+  [dist=0] Strategic sourcing decisions in supply chain management involve determining where products should be produced, when they should be made, and how they should be distributed to customers while minimizing total supply chain costs subject to all operatio
+  [dist=0.561] Supply chain strategy encompasses multiple interconnected issues that organizations must address systematically. Understanding inputs and outputs forms the foundation, followed by developing strategies for dispersed networks, managing globalization t
+
+=== ITEM 79 | 3-16-26 | diff=medium | 20260317_024849Z/item_14 ===
+Q: In the EOQ model with planned backorders, which factor primarily influences the optimal order-up-to level (s*)?
+A) The ordering cost K and the inventory holding cost h.
+B) The shortage cost π and the inventory holding cost h.
+C) The demand rate D and the ordering cost K.
+D) The variable cost cQ and the fixed cost K.
+Correct: B | Rev: REVISE align=3 dist=2 clarity=4 dm=False
+Reason: ["INCOMPLETE_CONTEXT", "MISLEADING_DISTRACTORS"]
+Chunks:
+  [dist=0] Shortage costs arise when demand cannot be immediately satisfied from available inventory and represent the loss of goodwill or damage to reputation that results from stockouts. These costs are inherently difficult to quantify precisely because they 
+  [dist=0.504] The EOQ model with planned backorders allows demand to exceed available inventory for planned periods, with customers willing to wait for items to be backordered. In this model, s represents the maximum inventory level (the order-up-to level), and Q 
+
+=== ITEM 80 | 3-16-26 | diff=medium | 20260317_024849Z/item_15 ===
+Q: According to the passage, which factor did NOT contribute to the sharp rise in ocean freight rates during 2021?
+A) Increased demand for shipping services due to post-pandemic recovery
+B) Reduced vessel capacity from port congestion
+C) Higher energy prices leading to increased operational costs
+D) Decreased global demand for agricultural commodities
+Correct: D | Rev: REVISE align=4 dist=3 clarity=5 dm=True
+Reason: ["DISTRACtors_NOT_PLAUSIBLE", "SOURCE_ALIGNMENT_PARTIAL"]
+Chunks:
+  [dist=0] Despite the substantial increases in ocean freight rates and widespread supply chain pressures observed since January 2020, statistical analysis reveals no measurable negative effects on U.S. maritime agricultural export levels or prices received by 
+  [dist=0.513] Ocean freight rates are determined by the fundamental forces of supply and demand in shipping services. Demand for ocean shipping increased sharply in 2021 following the COVID-19 downturn, as pandemic-related labor issues and supply chain disruptions
+
+=== ITEM 81 | 3-16-26 | diff=medium | 20260317_024849Z/item_16 ===
+Q: Which of the following best describes a challenge faced by traditional accounting systems in supply chain management?
+A) They provide detailed insights into individual functional costs.
+B) They fail to reveal hidden costs associated with different delivery scenarios.
+C) They accurately track inputs and outcomes simultaneously.
+D) They effectively manage inventory levels across all organizational functions.
+Correct: B | Rev: REVISE align=3 dist=4 clarity=4 dm=False
+Reason: ["INCOMPLETE_CONTEXT", "MISLEADING_DISTRACTORS"]
+Chunks:
+  [dist=0] Functional silos cause systematic sub-optimization throughout the supply chain. When individual functions attempt to optimize their own performance independently, the result is inventory build-up, longer cycle times, and poor coordination across the 
+  [dist=0.634] Supply chain management operates across three levels of decision-making and execution. Strategic decisions establish policies, objectives, and operating footprints for the supply chain. Tactical decisions deploy resources to match supply with demand 
+
+=== ITEM 82 | 3-16-26 | diff=medium | 20260317_024849Z/item_17 ===
+Q: Which statement accurately describes the Wagner-Whitin model for dynamic economic lot sizing without capacity constraints?
+A) It minimizes total cost by balancing production levels with inventory holding costs over a finite planning horizon.
+B) It ensures that inventory never falls below zero and initial inventory is set to a positive value.
+C) It requires an upper bound on production quantity in each period, making it more realistic for limited capacity scenarios.
+D) It uses the shortest path algorithm to solve problems within O(T²) time complexity, even for long planning horizons.
+Correct: A | Rev: REJECT align=1 dist=3 clarity=4 dm=False
+Reason: ["context_mismatch", "distractors_weak"]
+Chunks:
+  [dist=0] Dynamic economic lot sizing with capacity constraints adds an upper bound C_t on the production quantity in each period, creating a more realistic model where production capacity is limited. A feasible solution exists if and only if the cumulative ca
+  [dist=0.559] The Wagner-Whitin model for dynamic economic lot sizing without capacity constraints minimizes the sum of ordering costs and holding costs over a finite planning horizon. The model includes a fixed ordering cost K_t that is incurred whenever an order
+
+=== ITEM 83 | 3-16-26 | diff=medium | 20260317_024849Z/item_18 ===
+Q: Which of the following statements correctly describes the Zero Inventory Capacity Ordering (ZICO) principle?
+A) An optimal ordering policy must ensure that inventory at the end of a period multiplied by the order quantity in that period equals zero, I_{t-1} · y_t = 0.
+B) In each period, either the inventory is zero or the production is zero; if there's positive production, it must be at full capacity. This can be expressed as I_{t-1} · (C_t - y_t) · y_t = 0.
+C) The Wagner-Whitin model minimizes total costs by determining order quantities and inventory levels that satisfy demand while ensuring non-negative inventory and initial zero inventory, with a fixed ordering cost K_t per period.
+D) The (s,S) policy dictates placing an order to raise the inventory position to S whenever it falls below s, but does not consider capacity constraints.
+Correct: B | Rev: REVISE align=3 dist=4 clarity=2 dm=False
+Reason: ["INCOMPLETE_CONTEXT", "MIXED_DIFFICULTY"]
+Chunks:
+  [dist=0] The Zero Inventory Ordering (ZIO) policy is a fundamental principle in dynamic economic lot sizing that states any optimal ordering policy must satisfy the condition that inventory at the end of a period multiplied by the order quantity in that perio
+  [dist=0.439] The Zero Inventory Capacity Ordering (ZICO) policy extends the ZIO principle to capacity-constrained problems, stating that any optimal policy must satisfy I_{t-1} · (C_t - y_t) · y_t = 0 for t = 1, ..., T. This means that in each period, either the 
+
+=== ITEM 84 | 3-16-26 | diff=medium | 20260317_024849Z/item_19 ===
+Q: In the EOQ model with planned backorders, which statement accurately describes the relationship between shortage costs (π) and the optimal order-up-to level (s*)?
+A) As π increases, s* decreases because higher shortage costs make it more economical to allow larger backorder quantities.
+B) As π increases, s* increases because higher shortage costs make it less economical to allow larger backorder quantities.
+C) As π decreases, s* remains constant since the optimal order-up-to level is independent of shortage costs.
+D) As π decreases, s* approaches Q*, meaning fewer backorders are allowed and inventory levels rise.
+Correct: B | Rev: ACCEPT align=5 dist=4 clarity=4 dm=True
+Reason: ["CORRECT_KEY_CORRECT", "MIXED_PLAUSIBILITY"]
+Chunks:
+  [dist=0] The EOQ model with planned backorders allows demand to exceed available inventory for planned periods, with customers willing to wait for items to be backordered. In this model, s represents the maximum inventory level (the order-up-to level), and Q 
+  [dist=0.504] Shortage costs arise when demand cannot be immediately satisfied from available inventory and represent the loss of goodwill or damage to reputation that results from stockouts. These costs are inherently difficult to quantify precisely because they 
+
+=== ITEM 85 | 3-16-26 | diff=medium | 20260317_024849Z/item_20 ===
+Q: In the additive demand model, if the deterministic component g(p) = a - bp is known to have parameters a > 0 and b > 0, what is the expression for the optimal price p*?
+A) (2b + E[min(z*, ε)]) / (a + bc)
+B) (a + bc + E[min(z*, ε)]) / (2b)
+C) (bcz) / (Δ(b - 1))
+D) (bc / (b - 1)) · (z* / Δ)
+Correct: B | Rev: REVISE align=5 dist=3 clarity=4 dm=True
+Reason: ["DISTRACTORS_NOT_PLAUSIBLE", "STEM_AIMS_HIGH_BUT_CLARITY_LOW"]
+Chunks:
+  [dist=0] In the additive demand model, demand is expressed as D(p, ε) = g(p) + ε, where g(p) = a - bp represents the deterministic component with parameters a > 0 and b > 0, and ε is a random noise term with E[ε] = 0. The revenue function for a given order qu
+  [dist=0.558] When demand is deterministic rather than stochastic, the newsboy problem simplifies significantly. For the additive demand case with deterministic demand, the revenue function becomes R(p) = (p - c)g(p) = (p - c)(a - bp), and the derivative is ∂R(p)/
+
+=== ITEM 86 | 3-16-26 | diff=medium | 20260317_024849Z/item_21 ===
+Q: According to the passage, which factor did NOT contribute to increased ocean freight rates during 2021?
+A) Increased demand for ocean shipping services due to post-pandemic economic recovery.
+B) Reduced effective capacity in vessel availability due to port congestion.
+C) Higher energy prices that increased operational costs of shipping.
+D) Decreased global demand for agricultural commodities.
+Correct: D | Rev: REVISE align=4 dist=5 clarity=3 dm=False
+Reason: ["INCOMPLETE_CONTEXT", "MISALIGNMENT"]
+Chunks:
+  [dist=0] Equity prices for publicly-traded components of the U.S. agricultural sector have risen substantially since January 2020, with agricultural chemicals and fishing and farming indices up over 60 percent and food processing and food retail and distribut
+  [dist=0.612] Ocean freight rates are determined by the fundamental forces of supply and demand in shipping services. Demand for ocean shipping increased sharply in 2021 following the COVID-19 downturn, as pandemic-related labor issues and supply chain disruptions
+
+=== ITEM 87 | 3-16-26 | diff=medium | 20260317_024849Z/item_22 ===
+Q: Which of the following scenarios would most benefit from centralizing inventory control in a single warehouse?
+A) A company with low demand variability across its locations and positively correlated demands.
+B) A company with high demand variability across its locations but negatively correlated demands.
+C) A company with moderate demand variability across its locations and no correlation between demands.
+D) A company with stable, predictable demand at each location.
+Correct: B | Rev: ACCEPT align=5 dist=4 clarity=5 dm=True
+Reason: ["CORRECT_KEY_CORRECT", "DISTRACTORS_PLAUSIBLE"]
+Chunks:
+  [dist=0] Centralizing inventory control in a single warehouse reduces both safety stock and average inventory levels compared to maintaining separate inventories at multiple locations, while maintaining the same service level. This benefit works best when dem
+  [dist=0.618] Effective inventory management can generate substantial competitive advantages and cost reductions across supply chains. Companies like Xerox eliminated $700 million in inventory from their supply chain, Wal-Mart became the largest retail company by 
+
+=== ITEM 88 | 3-16-26 | diff=medium | 20260317_024849Z/item_23 ===
+Q: When designing a supply chain for fast-moving products at multiple locations, which network configuration is likely to be more cost-effective?
+A) A centralized network with fewer facilities but higher transportation costs.
+B) A dispersed network with many smaller facilities and lower transportation costs.
+C) A hybrid network combining elements of both centralized and dispersed configurations.
+D) The choice depends on the specific business circumstances and cannot be generalized.
+Correct: D | Rev: ACCEPT align=5 dist=4 clarity=5 dm=True
+Reason: ["SOURCE_ALIGNMENT_HIGH", "STEM_CLARITY_HIGH", "DIFFICULTY_MATCH"]
+Chunks:
+  [dist=0] When designing supply chains, organizations must consider relative transportation costs, demand uncertainty such as fast-moving products at multiple locations, and product variety. These factors interact to influence whether centralized or dispersed 
+  [dist=0.488] Supply chain strategy encompasses multiple interconnected issues that organizations must address systematically. Understanding inputs and outputs forms the foundation, followed by developing strategies for dispersed networks, managing globalization t
+
+=== ITEM 89 | 3-16-26 | diff=medium | 20260317_024849Z/item_24 ===
+Q: Which of the following best describes a key strategy companies adopted in response to increased outsourcing between 1993 and 1996?
+A) Companies focused on expanding their internal production capabilities.
+B) Companies outsourced more non-core functions, like marketing and sales.
+C) Companies leveraged supplier capabilities by focusing on core competencies.
+D) Companies reduced the complexity of their supply chains by centralizing operations.
+Correct: C | Rev: REVISE align=5 dist=3 clarity=4 dm=True
+Reason: ["SOURCE_ALIGNMENT_HIGH", "DISTRACTOR_PLAUSIBILITY"]
+Chunks:
+  [dist=0] Outsourcing has increased significantly across industries between 1993 and 1996, with purchasing as a percentage of sales rising from 34% to 54% in computer and telecom industries, from 24% to 28% in food manufacturing, and from 16% to 22% in telecom
+  [dist=0.581] A systematic approach to supply chain strategy development involves four key steps. First, develop a clear strategy and identify appropriate means of focus for the organization. Second, using data, benchmarking, and analysis of available technologies
+
+=== ITEM 90 | 3-16-26 | diff=medium | 20260317_024849Z/item_25 ===
+Q: Which of the following best describes a challenge faced by traditional accounting systems in supply chain management?
+A) They accurately track both inputs and outcomes, making it easy to identify hidden costs.
+B) They fail to provide cost transparency necessary for effective supply chain management due to tracking inputs rather than outcomes.
+C) They are overly complex and difficult to understand, leading to poor decision-making.
+D) They focus too much on operational decisions at the expense of strategic planning.
+Correct: B | Rev: ACCEPT align=5 dist=4 clarity=5 dm=True
+Reason: ["contextual_support", "plausible_distractors"]
+Chunks:
+  [dist=0] Functional silos cause systematic sub-optimization throughout the supply chain. When individual functions attempt to optimize their own performance independently, the result is inventory build-up, longer cycle times, and poor coordination across the 
+  [dist=0.634] Supply chain management operates across three levels of decision-making and execution. Strategic decisions establish policies, objectives, and operating footprints for the supply chain. Tactical decisions deploy resources to match supply with demand 
+
+=== ITEM 91 | 3-16-26 | diff=medium | 20260317_024849Z/item_26 ===
+Q: Which of the following best describes the challenge faced by companies in the 21st century business environment?
+A) The need to reduce operational costs significantly.
+B) The requirement for increased agility and responsiveness to market demands.
+C) The necessity to focus solely on internal processes without considering external factors.
+D) The obligation to maintain traditional organizational structures.
+Correct: B | Rev: REVISE align=3 dist=2 clarity=4 dm=False
+Reason: ["SOURCE_ALIGNMENT_VAGUE", "DIFFICULTY_MISMATCH"]
+Chunks:
+  [dist=0] The 21st century business environment has fundamentally transformed organizational demands. Companies now face increased pace of business change, more volatile markets, and intensified global competition through mergers and acquisitions. Simultaneous
+  [dist=0.575] The order-to-delivery process in functionally organized companies operates as a sequential relay race rather than an integrated system. Orders flow through sales, credit checking, planning, production, shipping, and invoicing as separate handoffs, wi
+
+=== ITEM 92 | 3-16-26 | diff=medium | 20260317_024849Z/item_27 ===
+Q: A company notices that its production orders are highly variable despite relatively stable customer demand. Which of the following best explains this observation?
+A) The company is experiencing the bullwhip effect.
+B) The company's suppliers are unreliable, leading to inconsistent order fulfillment.
+C) The company has a poorly designed distribution network.
+D) The company's inventory management system is flawed.
+Correct: A | Rev: ACCEPT align=5 dist=4 clarity=5 dm=True
+Reason: ["CORRECT_KEY_CORRECT", "STEM_CLARITY_HIGH"]
+Chunks:
+  [dist=0] A lean supply chain requires understanding supply chain dynamics from a systems perspective, recognizing that enterprises operate within a broader business ecosystem where variations at each step of the chain tend to become more pronounced the furthe
+  [dist=0.426] The dynamics of supply chains reveal a phenomenon where order sizes amplify as they move upstream from customers through retailers to distributors and finally to production planning. Customer demand exhibits relatively stable fluctuations, but retail
+
+=== ITEM 93 | 3-16-26 | diff=medium | 20260317_024849Z/item_28 ===
+Q: In a multi-period supply chain scenario with M plants and total demand D, how does one determine the number of plants whose production will be cut back?
+A) By finding l1 as the maximum m such that the sum of excess capacity from the m highest-cost plants exceeds total excess capacity.
+B) By identifying the index j(l) corresponding to the plant with the l-th highest cost multiplier and then calculating l* = l1 plus a fractional adjustment based on the next plant's excess capacity relative to total excess capacity.
+C) By ranking all M plants by their production capacities and cutting back those with the lowest capacities until D is met.
+D) By determining the number of plants that can be fully utilized without exceeding demand, then cutting back the rest equally.
+Correct: B | Rev: ACCEPT align=5 dist=4 clarity=4 dm=True
+Reason: ["CORRECT_KEY_CORRECT", "DISTRACTORS_PLAUSIBLE"]
+Chunks:
+  [dist=0] Candidate optimal facility configurations are identified through piecewise-linear modeling. For a given total capacity, different numbers of plants with different individual capacities represent candidate solutions. For example, with five plants, can
+  [dist=0.658] In each period with M plants having capacities Yj and demand D, optimal policy can be determined by ranking plants by their cost multiplier. Define j(l) as the index of the plant with the l-th highest cost multiplier. The number of plants with produc
+
+=== ITEM 94 | 3-16-26 | diff=medium | 20260317_024849Z/item_29 ===
+Q: Which level of decision-making in supply chain management involves scheduling, monitoring, controlling, and adjusting production activities?
+A) Strategic decisions
+B) Tactical decisions
+C) Operational decisions
+D) Logistics decisions
+Correct: C | Rev: ACCEPT align=5 dist=4 clarity=5 dm=True
+Reason: ["CORRECT_KEY_CORRECT", "STEM_CLARITY_HIGH"]
+Chunks:
+  [dist=0] Supply chain management operates across three levels of decision-making and execution. Strategic decisions establish policies, objectives, and operating footprints for the supply chain. Tactical decisions deploy resources to match supply with demand 
+  [dist=0.465] Supply chain strategy encompasses multiple interconnected issues that organizations must address systematically. Understanding inputs and outputs forms the foundation, followed by developing strategies for dispersed networks, managing globalization t
+
+=== ITEM 95 | 3-16-26 | diff=medium | 20260317_024849Z/item_30 ===
+Q: Which of the following best describes the role of a Logistics Scorecard Framework in organizational strategy?
+A) It serves as a static document that outlines logistical procedures without alignment to business objectives.
+B) It acts as an integrating mechanism for cross-functional teams, aligning all activities with order fulfillment goals.
+C) It is solely focused on internal efficiency and operational realities, disregarding market needs.
+D) It provides a detailed inventory of all logistics-related assets within the organization.
+Correct: B | Rev: REVISE align=3 dist=4 clarity=4 dm=False
+Reason: ["INCOMPLETE_CONTEXT", "MISALIGNMENT"]
+Chunks:
+  [dist=0] A logistics scorecard framework translates benchmarking insights into actionable key performance indicators (KPIs) aligned with organizational strategy. The four-step construction process begins by defining how logistics and supply chain strategy sup
+  [dist=0.668] The Customer Order Management System (COMS) serves as the integrating mechanism that aligns all organizational activity with order fulfillment. COMS integrates order entry, forecasting, inventory management, production, procurement, and delivery into
+
+=== ITEM 96 | 3-16-26 | diff=medium | 20260317_024849Z/item_31 ===
+Q: A company is evaluating its supply chain network design. Which of the following considerations would most likely influence whether a centralized or dispersed network configuration proves more cost-effective?
+A) The number of suppliers in the network.
+B) The variability and predictability of demand across different locations.
+C) The color scheme used for the supply chain diagram.
+D) The brand of computers used by the company's IT department.
+Correct: B | Rev: REVISE align=3 dist=2 clarity=4 dm=True
+Reason: ["INCOMPLETE_CONTEXT", "IMPROVE_DISTRACTORS"]
+Chunks:
+  [dist=0] Scale analysis examines the relationship between production volume and unit cost across different manufacturing technologies. As volume increases, unit costs typically decrease due to spreading fixed costs, but the rate of decrease varies by technolo
+  [dist=0.54] When designing supply chains, organizations must consider relative transportation costs, demand uncertainty such as fast-moving products at multiple locations, and product variety. These factors interact to influence whether centralized or dispersed 
+
+=== ITEM 97 | 3-16-26 | diff=medium | 20260317_024849Z/item_32 ===
+Q: In the EOQ model with planned backorders, which of the following expressions correctly represents the optimal order quantity Q*?
+A) √(2DK/h)
+B) √(2DK/h) × √((π+h)/π)
+C) √(2DK/h) + √(π/(π+h))
+D) √(2DK/h) - √(π/(π+h))
+Correct: B | Rev: REJECT align=1 dist=3 clarity=4 dm=False
+Reason: ["context_missing", "incorrect_difficulty"]
+Chunks:
+  [dist=0] In the EOQ model, the total cost for one replenishment cycle equals the ordering cost plus the inventory holding cost. The ordering cost is K plus cQ, while the holding cost is calculated by integrating the inventory level over the cycle time. Since 
+  [dist=0.518] The EOQ model with planned backorders allows demand to exceed available inventory for planned periods, with customers willing to wait for items to be backordered. In this model, s represents the maximum inventory level (the order-up-to level), and Q 
+
+=== ITEM 98 | 3-16-26 | diff=medium | 20260317_024849Z/item_33 ===
+Q: Which of the following is a key driver influencing strategic sourcing decisions in supply chain management?
+A) The color scheme of the company's logo
+B) The number of employees in the marketing department
+C) Freight costs for existing and potential transportation lanes
+D) The CEO's favorite vacation spot
+Correct: C | Rev: ACCEPT align=5 dist=4 clarity=5 dm=True
+Reason: ["STRONG_CONTEXT_SUPPORT", "REASONABLE_DISTRACTORS"]
+Chunks:
+  [dist=0] Strategic sourcing decisions in supply chain management involve determining where products should be produced, when they should be made, and how they should be distributed to customers while minimizing total supply chain costs subject to all operatio
+  [dist=0.561] Supply chain strategy encompasses multiple interconnected issues that organizations must address systematically. Understanding inputs and outputs forms the foundation, followed by developing strategies for dispersed networks, managing globalization t
+
+=== ITEM 99 | 3-16-26 | diff=medium | 20260317_024849Z/item_34 ===
+Q: Which of the following best describes how benchmarking can influence a company's approach to logistics and supply chain management?
+A) By focusing solely on internal metrics like cost per unit or equipment utilization.
+B) Through comparing practices, processes, and results with industry leaders and other sectors' best-in-class organizations.
+C) Benchmarking has no impact on logistics and supply chain strategies as it is only useful for manufacturing.
+D) Companies should avoid benchmarking to prevent the adoption of new technologies from competitors.
+Correct: B | Rev: REVISE align=5 dist=4 clarity=3 dm=True
+Reason: ["DISTRACTORS_ARE_PLAUSIBLE", "STEM_IS_PARTIALLY_CLARIFIED"]
+Chunks:
+  [dist=0] Benchmarking represents a critical performance management tool that shifts organizational focus from internal metrics to comparative performance against competitors, industry leaders, and customer expectations. Traditional performance measurement emp
+  [dist=0.706] A logistics scorecard framework translates benchmarking insights into actionable key performance indicators (KPIs) aligned with organizational strategy. The four-step construction process begins by defining how logistics and supply chain strategy sup
+
+=== ITEM 100 | 3-16-26 | diff=medium | 20260317_024849Z/item_35 ===
+Q: Which strategy, based on Little's Law, can help reduce the bullwhip effect?
+A) Increasing inventory levels to ensure steady production
+B) Implementing smaller and more frequent orders with suppliers
+C) Reducing lead times in combination with improved visibility along the supply chain
+D) Using allocation based on past sales rather than reactive ordering patterns
+Correct: C | Rev: ACCEPT align=5 dist=4 clarity=5 dm=True
+Reason: ["STRONG_CONTEXT_SUPPORT", "REASONABLE_DISTRACTORS"]
+Chunks:
+  [dist=0] Lead times and inventory exist in a problematic cyclical relationship governed by Little's Law: when inventory in the supply chain is high, lead times increase, and conversely, longer lead times result in more inventories in the pipeline. Reducing le
+  [dist=0.449] A lean supply chain requires understanding supply chain dynamics from a systems perspective, recognizing that enterprises operate within a broader business ecosystem where variations at each step of the chain tend to become more pronounced the furthe

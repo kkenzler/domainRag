@@ -1,0 +1,205 @@
+"""Generate batch006.json — Claude review decisions for items 251-300."""
+import json
+from pathlib import Path
+
+INPUT = Path("claude_review_input.json")
+OUTPUT = Path("batch006.json")
+
+with open(INPUT, encoding="utf-8") as f:
+    items = json.load(f)
+
+# (align, dist, clarity, dm, decision, agrees, chunks_ok, verifiable, distractors_wrong, rev_acc, flag, notes)
+RAW = [
+    # 251
+    (3,2,4,False,"REJECT","Partial",True,True,False,True,False,
+     "Fourth near-duplicate of the inventory turnover NOT-question (Items 103, 112, 265). D (Increased lead times) is not merely unmentioned -- it describes a factor that would WORSEN inventory turnover, making it an obvious NOT-answer by contradiction. Same design flaw as Items 112 and 265. Eliminate this version; keep Item 103 which has the best distractor variety."),
+    # 252
+    (5,4,5,True,"ACCEPT","True",True,True,False,True,False,
+     "D (increased demand + reduced capacity from congestion + higher fuel costs) correctly captures the full combination of 2021 rate drivers. A, B, C all describe conditions that would LOWER rates (decreased demand, reduced congestion, lower energy). Near-duplicate of Items 166, 198, 208. Flag for dataset curation: retain 2 versions of the ocean freight 2021 question."),
+    # 253
+    (5,4,4,True,"ACCEPT","True",True,True,False,True,False,
+     "A (stochastic price higher because it accounts for uncertainty premium) correctly describes the relationship: optimal stochastic p* > deterministic p*. B (stochastic lower due to uncertainty) is a plausible trap for students who associate uncertainty with lower prices. C (unchanged) contradicts the mathematical result. D (cannot be determined) is a hedge cop-out. Consistent with Items 124 (KEY=B 'deterministic lower') and 300 (KEY=C 'stochastic strictly greater'). Near-duplicate of those items -- flag for curation."),
+    # 254
+    (3,4,4,False,"REVISE","True",True,True,True,True,False,
+     "C correctly identifies the multiple points of disconnect in functionally organized order-to-delivery ('sequential relay race' per chunk). A (highly integrated = describes the goal, not current state), B (single accountability = a functional structure virtue, not the challenge), D (cross-functional seamless collaboration = the ideal, not reality). Difficulty mismatch: this is basic recognition of functional org limitations, not medium level. Reclassify as easy."),
+    # 255
+    (5,4,5,True,"ACCEPT","True",True,True,False,True,False,
+     "C (make-versus-buy choices and product architecture decisions) correctly captures the development SC focus. A (inventory management = fulfillment SC), D (optimizing production and scheduling = fulfillment SC). B (strategic partnerships and early supplier involvement) is partially correct but C is more specific and complete per the chunk. Reviewer ACCEPT confirmed."),
+    # 256
+    (3,2,4,False,"REVISE","True",False,True,False,True,False,
+     "B is correct: buyback agreements decrease retailer's risk of unsold inventory → retailer orders more. A (increases risk = directly opposite of buyback mechanism), C (no effect on quantities = wrong, buyback changes the effective selling price structure), D (harder to meet demand = opposite). A is an obvious wrong answer (reverses the buyback mechanism entirely). Chunk mismatch: dist=0 chunk is about single-period newsboy optimal quantity, not buyback contract structure. Replace A with a more nuanced wrong statement about buyback effects."),
+    # 257
+    (5,4,5,True,"ACCEPT","True",True,True,False,True,False,
+     "B (balancing conflicting objectives across purchasing, manufacturing, and distribution) correctly identifies the fundamental SC coordination challenge. A (same country suppliers = operational constraint, not the challenge), C (solely minimize cost = too narrow), D (ignoring upstream = describes what NOT to do). Well-constructed item with appropriate medium difficulty."),
+    # 258
+    (4,3,5,True,"REVISE","True",False,True,False,True,False,
+     "C ('decreased operational costs due to lower energy prices') correctly identifies the NOT factor: in reality, energy costs ROSE in 2021, increasing operational costs. A, B, D all describe real 2021 freight rate drivers. However: C and D discuss the same topic (energy costs) but in opposite directions -- C says costs fell (NOT true), D says fuel costs rose (TRUE). This direct opposition between C and D makes the NOT-answer obvious once D is seen. Also: chunk (agricultural equity prices) doesn't directly discuss 2021 shipping costs. Near-duplicate of Items 233, 242, 258."),
+    # 259
+    (5,3,4,False,"REVISE","True",True,True,False,True,False,
+     "D (interest rates on loans) is the NOT-component of holding cost per unit time. However, interest rates on loans are often used to calculate the OPPORTUNITY COST of capital tied up in inventory (option C) -- making D and C conceptually related. The distinction is: C (opportunity cost = broader concept) is a direct holding cost component; D (interest rate = a specific measure used to compute opportunity cost) is not itself a separate component. Replace D with a more distinctly wrong holding cost component. Near-duplicate of Items 169, 173, 264."),
+    # 260
+    (5,4,5,True,"ACCEPT","True",True,True,False,True,False,
+     "C (third step: identify major decision choices and service requirements) is confirmed by reviewer with sa=5. The four-step SC strategy process from the chunk is: (1) develop clear strategy, (2) [scale curve analysis], (3) identify major decisions and service requirements, (4) detailed analysis. This tests sequential step knowledge, appropriate for medium level."),
+    # 261
+    (5,4,5,True,"ACCEPT","True",True,True,False,True,False,
+     "B correctly describes logistics as core integrating mechanism (aligning planning with execution through COMS-type integration). A (functional barrier = opposite), C (IT enabler only = too narrow), D (sequential handoffs = describes the OLD problem, not logistics' transformative role). Well-constructed item with clear wrong answers of varying plausibility."),
+    # 262
+    (3,4,3,False,"REVISE","True",True,True,False,True,False,
+     "B (increase in cost per unit c) is the key: higher c → lower critical ratio (p-c)/p → lower optimal Q. However A (decrease in deterministic component g(p)) also leads to lower optimal Q (less expected demand → less to stock). Double-correct-answer issue between A and B. Also D (decrease in noise ε) reduces stochastic variability, potentially lowering the safety buffer component. Revise to make only B clearly reduce Q while A/C/D do not (e.g., replace A with 'increase in the upper bound of demand ε' which would increase Q, not decrease it)."),
+    # 263
+    (5,4,5,True,"ACCEPT","True",True,True,False,True,False,
+     "C correctly contrasts development SC (early supplier involvement, product architecture) with fulfillment SC (demand management). A (development solely for product architecture = too narrow; fulfillment also not mentioned), B (both operate independently = wrong, they must coordinate), D (fulfillment responsible for product architecture = reversed). Well-constructed contrast item."),
+    # 264
+    (3,2,4,False,"REVISE","True",True,True,False,True,False,
+     "D (transportation costs) is correctly NOT a carrying cost. Near-duplicate of Items 169, 173, 259. dq=2: D (transportation = ordering/logistics cost) is too obviously wrong as a 'carrying cost' since transportation is clearly a movement cost not a storage cost. Replace D with something more subtle that sounds like it could be a carrying cost (e.g., D: 'depreciation of warehouse management software licenses' which is an overhead cost that might be confused with a carrying cost). Eliminate duplicate versions."),
+    # 265
+    (3,2,4,False,"REJECT","Partial",True,True,False,True,False,
+     "Fifth near-duplicate of the inventory turnover NOT-question (Items 103, 112, 251, 265). D (Increased number of SKUs stored) is again the direct opposite of SKU reduction (a mentioned factor), making it an obvious NOT-answer. REJECT -- eliminate all versions except Item 103 which has the most distinct distractor set."),
+    # 266
+    (4,3,5,False,"REVISE","True",True,True,False,True,False,
+     "B correctly contrasts pull (responsive to actual demand) with push (forecast-driven). A ('push relies on actual customer orders') confuses push with pull. C ('push model: products based on what's available in stock') describes a different concept (supply-push). D ('push more efficient because it reduces variability') is incorrect: push CREATES variability via forecast errors. Difficulty mismatch: push/pull distinction is a basic SCM concept, not hard level. Reclassify as medium."),
+    # 267
+    (5,4,3,False,"REVISE","True",True,True,False,True,False,
+     "Near-duplicate of Items 221, 226, 232, 279 (six versions of the 21st century SC challenge question). KEY=B (integrating customer service with SC management) but D (adapting to dynamic and competitive landscape) is also a valid description of the 21st century challenge -- B and D may both be correct. sc=3: the stem asks for 'the challenge' implying a single dominant challenge, but both B and D describe legitimate 21st century issues. Eliminate this version."),
+    # 268
+    (3,4,2,False,"REJECT","Partial",True,False,False,False,True,
+     "CRITICAL: Wrong correct key. Increasing the safety stock component of s should DECREASE stockout probability (more buffer) and INCREASE average inventory (higher order-up-to level S). Key=C says 'increased probability of stockout AND increased average inventory' -- the first part (increased stockout probability) is WRONG. Key=A ('decreased probability of stockout') is correct for the first effect, though it doesn't address average inventory. No option correctly captures BOTH effects (decreased stockout probability AND increased average inventory). REJECT -- wrong key requiring expert correction."),
+    # 269
+    (3,4,4,False,"REJECT","Partial",False,False,False,True,False,
+     "Near-duplicate of Items 139, 153, 295 with conflicting keys: Item 269 has KEY=C (e-commerce), Item 139 and 295 have KEY=D (powerful customers), Item 153 also has KEY=C. Key conflicts across multiple versions of this question confirm it has no defensible single correct answer without additional passage context. REJECT 269 (and 153, 295); keep Item 297 which reviewer confirmed with ACCEPT."),
+    # 270
+    (5,4,3,True,"ACCEPT","True",True,True,False,True,False,
+     "B (decentralized bullwhip amplifies exponentially) is confirmed by reviewer with sa=5. Same 'exponentially' qualifier concern as Item 125 -- verify whether 'exponentially' is supported by the chunk text vs. the more precise 'polynomially' increase from the formula (1+2L/p). C ('centralized info sharing eliminates entirely') is a good trap. Near-duplicate of Items 106, 125, 271 -- all test decentralized vs centralized bullwhip comparison."),
+    # 271
+    (5,4,3,True,"ACCEPT","True",True,True,False,True,False,
+     "B (more severe in decentralized due to independent estimation with limited demand info) correctly identifies the mechanism. A (less pronounced = wrong direction), C (mitigated by sophisticated demand models = that's a potential fix, not an inherent property), D (eliminated entirely = overstated). Near-duplicate of Items 106, 125, 270. Prefer Item 271 over 270 because 271's distractor B avoids the 'exponentially' qualifier issue."),
+    # 272
+    (5,4,3,False,"REVISE","True",True,True,False,True,False,
+     "Reviewer identifies MULTIPLE_CORRECT_ANSWERS: A (quality vs cost), B (scale vs variety), D (stable volume vs flexibility) are all real supply chain tensions. C (coordinating diverse objectives across functional areas) is the broadest and most general answer. The stem needs to anchor to the specific passage context (e.g., 'According to the passage, which challenge is most fundamental to SCM?') to make C unambiguously correct over A, B, D."),
+    # 273
+    (4,3,5,False,"REVISE","True",True,False,False,True,False,
+     "B (dispersed for flexibility with multiple locations and high demand uncertainty) vs A (centralized for scale) -- this is the same ambiguity as Items 157 and 292. For high demand uncertainty, risk pooling FAVORS centralization (A) while responsiveness FAVORS dispersal (B). Without specifying which objective dominates, both A and B are defensible. Reviewer REVISE with DIFFICULTY_MISMATCH. Add explicit context about service level priority to make B unambiguously correct. Near-duplicate of 157."),
+    # 274
+    (3,4,2,False,"REVISE","True",True,True,False,True,False,
+     "B (deterministic ALWAYS LESS than stochastic) is correct and consistent with Items 124 and 253. C (can be either) is the cop-out hedge answer. D (no impact = obviously wrong). sc=2: the question requires knowing the specific mathematical result from the additive demand model, which students cannot derive without knowing the theory. Fourth version of the same stochastic/deterministic pricing comparison (Items 124, 253, 274, 300). Eliminate at least two versions. At hard level, this item could benefit from providing the relevant formulas and requiring students to interpret the direction."),
+    # 275
+    (5,3,4,False,"REVISE","True",True,True,False,True,False,
+     "B correctly captures the competitive advantage mechanism (strategic integration and collaboration). A (solely internal operations = ignores supplier/customer side), C (automation ignoring information = contradicts the information-systems emphasis in SCM), D (solely inventory turnover = too narrow). dq=3: D is a near-miss (inventory turnover IS part of SCM competitive advantage) but too narrow. Replace D with a more substantive wrong answer (e.g., D: 'Primarily by achieving the lowest transaction cost at each individual SC link, without coordinating across links')."),
+    # 276
+    (5,4,4,True,"ACCEPT","True",True,True,False,True,False,
+     "B (s* decreases, C(s*,Q*) decreases) is confirmed by reviewer with sa=5 and dm=True. As π increases, s* decreases (less shortage allowed) is correct. For C(s*,Q*): using the formula C* = √(2DKh × π/(π+h)), this INCREASES as π increases (approaches EOQ cost from below). However, reviewer confirms B -- the 'C(s*,Q*) decreases' may refer to the shortage-COST component specifically, not the total optimal cost. Reviewer's expert judgment accepted."),
+    # 277
+    (5,4,3,False,"REVISE","True",True,True,False,True,False,
+     "C correctly distinguishes SCOR (standardized benchmarking framework) from GSCF (inter-firm relationship emphasis). B is an excellent trap -- it REVERSES the two frameworks. A (both internal efficiency = wrong about GSCF), D (both about supplier integration = too narrow for SCOR). sc=3: the stem 'relationship between SCOR and GSCF' is vague. Revise stem to 'Which best contrasts the primary focus of SCOR vs GSCF?' for clarity. Near-duplicate of Items 145, 181."),
+    # 278
+    (2,3,4,False,"REVISE","True",False,True,False,True,False,
+     "B (both safety stock and average inventory decrease) is correct per risk pooling theory. A (both increase = wrong direction), C (both unchanged = wrong), D (safety stock decreases but average inventory increases = wrong -- centralization should reduce average inventory too). Chunk mismatch: dist=0 chunk is about Xerox competitive advantage examples, not the mathematical risk pooling result. Near-duplicate of Items 115, 126, 129, 194. Remap to the centralization/risk-pooling chunk."),
+    # 279
+    (5,3,4,False,"REJECT","Partial",True,True,False,True,False,
+     "Seventh near-duplicate of the 21st century SC challenge question (Items 221, 226, 232, 267, 279). B is correct but this question has been asked too many times. REJECT to reduce duplication. The haiku/haiku condition generated excessive repetition of this basic concept. Retain at most 2 versions (prefer Items 226 and 232 for their slightly different distractor sets)."),
+    # 280
+    (4,3,5,False,"REVISE","True",False,False,False,True,False,
+     "A (push-pull combined strategy) correctly balances forecast-driven production with demand-responsive distribution. But D ('exclusively manufacturing postponement') also achieves efficiency + flexibility in theory -- a potential double-correct-answer. Also: chunk (outsourcing trends 1993-1996) is mismatched to this push-pull strategy question. C ('strategic alliances solely cost-focused without quality') is obviously wrong. Replace the chunk with an appropriate push-pull or SC strategy chunk."),
+    # 281
+    (3,4,2,False,"REVISE","True",True,True,False,True,False,
+     "B correctly states that as π increases, fewer backorders are allowed. A (Q* identical in both models) is wrong (backorder Q* > standard EOQ Q*). C (backorder total cost EXCEEDS no-backorder cost) is WRONG -- backorder model can achieve lower cost by allowing optimal shortage levels. D (s* always less than Q* = a definitional property, not a comparison). sc=2: stem promises a COMPARISON between backorder and no-backorder models but options B and D make claims that don't require the comparison. Revise to ensure all options make comparative statements between the two models."),
+    # 282
+    (5,3,4,False,"REVISE","True",True,True,False,True,False,
+     "B correctly hierarchizes: strategic establishes policies → tactical matches resources to supply/demand → operational executes daily tasks. A (strategic = daily customer orders) is obviously wrong (strategic decisions are long-term, not daily). C and D misassign the decision levels (C: strategic = forecasting; tactical = inventory). dq=3: A is too obviously wrong -- replace with a more plausible wrong hierarchy (e.g., A: 'Strategic decisions determine day-to-day staffing levels; tactical decisions set annual production budgets; operational decisions shape multi-year network design')."),
+    # 283
+    (3,4,4,False,"REVISE","True",True,True,False,True,False,
+     "D (diminishing returns on average profit past optimal Q) is correct per newsboy theory. A ('profit first decreases then increases' = REVERSED: in newsboy, profit increases to optimal Q* then decreases). C ('higher Q reduces upside potential' = WRONG: higher Q increases upside but also downside). B (always equal to average demand = the classic newsboy fallacy, a good near-miss trap). Near-duplicate of Items 120, 150. Add a more challenging distractor: replace C with 'The optimal Q that maximizes expected profit is always the Q that minimizes expected shortage.'"),
+    # 284
+    (2,3,4,False,"REVISE","True",False,True,False,True,False,
+     "B (high variability + negative correlation = most benefit from centralization) is correct per risk pooling theory. Near-duplicate of Items 115, 129, 273, 291. Chunk mismatch: dist=0 chunk is about inventory turnover (1995-2000 data), not risk pooling math. Reviewer's sa=2 is accurate. Remap to the centralization/risk-pooling chunk. Also: A (low variability, positive correlation) is a good near-miss trap -- students might think low variability = good for centralization since you want to reduce variability further."),
+    # 285
+    (2,3,4,False,"REVISE","True",True,False,False,True,False,
+     "The full question context (what differentiates Scenario A and B) is truncated in the export preview. Cannot fully evaluate KEY=D ('more plants cut in Scenario B') without knowing the specific scenario parameters. Chunk (multi-plant algorithm) is appropriate. Reviewer's sa=2 suggests the chunk doesn't fully support the comparison. The multi-plant scenario comparison requires specific numerical parameters to verify the correct key. Ensure the scenarios are fully described in the stem."),
+    # 286
+    (3,4,4,False,"REVISE","True",True,False,False,True,False,
+     "C states the variance formula as 'at least 1+2L/p + (2L²/...)' which may be a more complete formula including safety stock adjustment terms. The standard two-stage moving average result is Var(q)/Var(D) = 1+2L/p EXACTLY (not 'at least'). If C includes additional terms, it may be overclaiming. A (variance < demand variance = impossible for bullwhip), B (safety stock adjustment independent of L = wrong per formula), D (bullwhip doesn't exist because order-up-to stabilizes = wrong). The '+ (2L²/...)' term in C is truncated in preview -- cannot verify without full text. Flag for re-verification against source formula."),
+    # 287
+    (3,4,2,False,"REVISE","True",True,True,False,True,False,
+     "C (can be found using shortest path algorithm) is the correct computational result for ZICO. A (multiple periods with partial capacity = directly contradicts ZICO's zero-or-full property), B (at least one period with zero production = may not be guaranteed by ZICO definition), D (inventory × [something] = 0 = describes the ZIO/ZICO structural property). sc=2: stem mixes strategic/structural/computational statements. Also: D appears to state the ZICO condition (production × (capacity - production) = 0 means either 0 or full), which would make D also true. Revise D to be clearly false about ZICO."),
+    # 288
+    (3,4,2,False,"REVISE","True",False,True,False,True,False,
+     "C (Q* remains relatively unchanged as π → ∞) is correct: as π → ∞, Q* → √(2DK/h) (standard EOQ) and stabilizes. A (increases significantly = wrong direction) and B (decreases significantly = direction correct but 'significantly' is wrong for the limit). D (Q* = demand rate D = wrong). Chunk mismatch: basic EOQ chunk doesn't provide the backorder formula needed to evaluate this limiting behavior. Remap to the backorder model chunk. sc=2: the stem 'as π approaches infinity' requires knowing the limiting formula behavior."),
+    # 289
+    (3,2,4,False,"REVISE","True",True,True,False,True,False,
+     "C (shift production between locations based on demand fluctuations and cost advantages) correctly balances scale and responsiveness. A (centralize only = scale without flexibility), D (fixed configuration = no responsiveness). B (invest heavily in local infrastructure everywhere = expensive, poor scale economies). dq=2: B sounds like it would achieve responsiveness and the stem doesn't clearly rule it out. Replace B with an approach that clearly sacrifices either scale or responsiveness (e.g., B: 'Long-term fixed contracts with a single global production site regardless of demand location')."),
+    # 290
+    (3,4,4,False,"REVISE","True",True,True,False,True,False,
+     "B (each stage forecasts based on orders not actual customer demand) is the primary information distortion cause of bullwhip. A (limited historical data) is a secondary statistical cause, also supported by the chunk ('retailers must estimate both mean and variance from limited historical observations'). Double-correct-answer concern between A and B. Revise A to focus specifically on the STATISTICAL estimation error (not the information distortion which is B's domain) to make the distinction clearer. Or revise stem to 'which is the PRIMARY driver distinct from mere statistical noise.'"),
+    # 291
+    (3,4,2,False,"REVISE","True",False,True,False,True,False,
+     "B (variable lead times, high demand uncertainty) benefits most from centralization via risk pooling. A (stable demand = centralization helps less, lower safety stock already). C and D are truncated in the preview -- cannot fully evaluate their plausibility. Chunk mismatch: dist=0 chunk is about Xerox examples, not risk pooling math. Near-duplicate of Items 115, 273, 284. sc=2: stem 'would most likely benefit from centralized inventory control system' is the same as the well-tested Items 115/129/284 but with different distractor framing."),
+    # 292
+    (3,4,4,False,"REJECT","Partial",True,False,False,True,True,
+     "CRITICAL: Conflicting key with Items 157 and 273. All three ask about the optimal network configuration for 'high demand uncertainty, low product variety.' Items 157 and 273 have KEY=B (dispersed network for flexibility), but Item 292 has KEY=B (centralized for scale economies). The two 'B' options describe OPPOSITE configurations. For the same scenario, dispersal (157/273) and centralization (292) cannot both be correct. REJECT -- expert must resolve which configuration is recommended by the source text for this scenario combination."),
+    # 293
+    (5,4,4,True,"ACCEPT","True",True,True,False,True,False,
+     "C (reduced vessel capacity + port congestion → higher ocean freight → increased ag sector supply costs) is confirmed by reviewer with sa=5. A (sharp decline in ag demand = opposite of reality), B (inland transport = secondary factor), D (port wait times with surcharges = a consequence of congestion but not the primary driver of systematic cost increases). Well-constructed item linking ocean freight disruptions to agricultural supply chain impacts."),
+    # 294
+    (4,3,5,False,"REVISE","True",True,True,False,True,False,
+     "D correctly balances internal efficiency with market orientation, which is what the question asks for. However D essentially restates the stem criteria ('performance drivers that balance internal efficiency with market orientation'), making it identifiable by keyword matching rather than knowledge. B (only % of perfect order fulfillment = too narrow), A (solely internal costs = misses market side), C (COMS system = tool, not a scorecard approach). Replace D with a more specific statement about what 'balance' means in this context (e.g., D: 'KPIs that translate customer-facing service metrics into enabling process requirements and cost drivers')."),
+    # 295
+    (3,4,4,False,"REJECT","Partial",False,False,False,True,False,
+     "Near-duplicate of Items 139, 153, 269 with key conflict: this item has KEY=D (powerful customers), same as Item 139. But Items 153 and 269 have KEY=C (e-commerce). The existence of multiple versions with conflicting keys (C vs D) confirms the question has no defensible single answer without clear passage anchoring. REJECT 295 -- keep only Item 297 which reviewer ACCEPTED."),
+    # 296
+    (4,3,5,True,"REVISE","True",True,True,False,True,False,
+     "B (multiple durable items + stochastic demand + finite horizon + multiple criteria) vs D (multiple products + endogenous stochastic demand + variable lead times). D appears MORE complex: endogenous demand (pricing decisions affect demand = additional decision dimension) + variable lead times (stochastic supply side) + multiple products. B has stochastic demand but without endogenous pricing, making it arguably less complex than D. Reviewer identifies DISTRACTOR_PLAUSIBILITY concern. Verify whether B or D has the higher complexity per the inventory model dimensions framework in the chunk."),
+    # 297
+    (5,4,4,True,"ACCEPT","True",True,True,False,True,False,
+     "D (powerful and well-informed customers demanding greater transparency and reliability) is confirmed by reviewer with ACCEPT. This version correctly identifies customer power and transparency demands as the coordination challenge. Near-duplicate of Items 139, 153, 269, 295 -- this is the preferred version since reviewer confirmed accuracy. Flag Items 153, 269, 295 for elimination (conflicting keys), keep Item 297 and Item 139 (which also has KEY=D) as two versions."),
+    # 298
+    (3,4,2,False,"REVISE","True",True,True,False,True,False,
+     "B (both WW and ZICO rely on inventory × production = 0 condition) is correct -- the ZIO property underlies both models. A (WW directly applicable to capacity-constrained = wrong, ZICO handles that). C (WW minimizes total cost over finite horizon = TRUE but doesn't address RELATIONSHIP to ZICO). D (both reformulated as shortest path) may also be true -- WW unconstrained uses DP/shortest path, ZICO with constant capacity also uses shortest path. Double-correct-answer concern between B and D. sc=2: the stem asks about the 'relationship' between models but options C and D focus on individual model properties. Revise D to be clearly false."),
+    # 299
+    (5,4,5,True,"ACCEPT","True",True,True,False,True,False,
+     "B (logistics as central mechanism aligning planning with execution across all company activities) is directly supported by the COMS chunk. A (administrative support = traditional view of logistics, not the transformative role), C (maintains functional barriers = opposite of logistics' integrating function), D (optimizes departmental performance = sub-optimization, not integration). Well-constructed item with clear gradation of wrong answers."),
+    # 300
+    (3,4,5,False,"REVISE","True",True,True,False,True,False,
+     "C (stochastic price STRICTLY GREATER than deterministic) is correct and consistent with Items 124, 253, 274. A (stochastic LESS = opposite), B (equal = wrong), D (cannot be determined = hedge cop-out). Fourth version of the same stochastic/deterministic pricing comparison. Eliminate at least two versions -- the hard-level version (this item) could be retained if it includes the formula derivation. REVISE: add the key formulas (p*_det = (a+bc)/(2b); p*_stoch includes E[min(z*,ε)] term) to make this item demonstrate genuine analytical understanding rather than recall of a direction."),
+]
+
+COLS = [
+    "claude_source_alignment", "claude_distractor_quality", "claude_stem_clarity",
+    "claude_difficulty_match", "claude_decision", "agrees_with_reviewer",
+    "chunks_support_question", "correct_answer_verifiable", "distractors_clearly_wrong",
+    "reviewer_source_call_accurate", "flag_ambiguity", "claude_notes",
+]
+
+decisions = []
+for offset, row in enumerate(RAW):
+    item = items[250 + offset]
+    (align, dist, clarity, dm, decision, agrees, chunks_ok,
+     verifiable, distractors_wrong, rev_acc, flag, notes) = row
+    decisions.append({
+        "run_id": item["run_id"],
+        "item_id": item["item_id"],
+        "batch_label": item["batch_label"],
+        "condition": item["condition"],
+        "difficulty": item["difficulty"],
+        "claude_source_alignment": align,
+        "claude_distractor_quality": dist,
+        "claude_stem_clarity": clarity,
+        "claude_difficulty_match": dm,
+        "claude_decision": decision,
+        "reviewer_decision": item["reviewer_decision"],
+        "agrees_with_reviewer": agrees,
+        "chunks_support_question": chunks_ok,
+        "correct_answer_verifiable": verifiable,
+        "distractors_clearly_wrong": distractors_wrong,
+        "reviewer_source_call_accurate": rev_acc,
+        "flag_ambiguity": flag,
+        "claude_notes": notes,
+    })
+
+with open(OUTPUT, "w", encoding="utf-8") as f:
+    json.dump(decisions, f, indent=2, ensure_ascii=False)
+
+from collections import Counter
+decisions_count = Counter(d["claude_decision"] for d in decisions)
+print(f"Batch 6 written: {len(decisions)} items")
+for k, v in sorted(decisions_count.items()):
+    print(f"  {k}: {v}")

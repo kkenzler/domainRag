@@ -783,6 +783,278 @@ def run_merged_mode(master_path: Path, out_dir: Path) -> None:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Claude Review mode
+# ─────────────────────────────────────────────────────────────────────────────
+
+_CR_AGREE_COLORS = {"True": "#4CAF50", "Partial": "#FF9800", "False": "#F44336"}
+
+
+def load_claude_review(decisions_json: Path) -> list:
+    """Load claude_review_decisions.json, return normalised list of item dicts."""
+    import json
+    with open(decisions_json, encoding="utf-8") as f:
+        raw = json.load(f)
+    for item in raw:
+        item["condition"] = item.get("condition") or "unknown"
+        item["difficulty"] = item.get("difficulty") or "unknown"
+        for bfield in ("agrees_with_reviewer", "flag_ambiguity", "chunks_support_question",
+                       "correct_answer_verifiable", "distractors_clearly_wrong",
+                       "reviewer_source_call_accurate", "claude_difficulty_match"):
+            v = item.get(bfield)
+            if isinstance(v, str):
+                item[bfield] = True if v.lower() == "true" else (
+                    False if v.lower() == "false" else v)
+    return raw
+
+
+def _cr_by_condition(items: list) -> dict:
+    """Group items by condition, return ordered {cond: [items]}."""
+    from collections import defaultdict
+    out = defaultdict(list)
+    for it in items:
+        out[it["condition"]].append(it)
+    return {c: out[c] for c in COND_ORDER if c in out}
+
+
+def cr_decisions_bar(ax, by_cond: dict):
+    """Stacked bar: ACCEPT / REVISE / REJECT by condition."""
+    conds = list(by_cond.keys())
+    labels = [c.replace("/", "/\n") for c in conds]
+    bottoms = np.zeros(len(conds))
+    for dec in ["ACCEPT", "REVISE", "REJECT"]:
+        pcts = [sum(1 for it in by_cond[c] if it["claude_decision"] == dec)
+                / len(by_cond[c]) * 100 for c in conds]
+        bars = ax.bar(labels, pcts, bottom=bottoms,
+                      color=DEC_COLORS[dec], label=dec, width=0.55)
+        for bar, pct in zip(bars, pcts):
+            if pct > 6:
+                ax.text(bar.get_x() + bar.get_width() / 2,
+                        bar.get_y() + bar.get_height() / 2,
+                        f"{pct:.0f}%", ha="center", va="center",
+                        color="white", fontsize=8, fontweight="bold")
+        bottoms += np.array(pcts)
+    style_ax(ax, "Claude Decisions by Condition", "% of items")
+    ax.set_ylim(0, 110)
+    ax.legend(fontsize=8, labelcolor=TEXT_COL, framealpha=0.2, loc="upper right")
+
+
+def cr_score_bars(ax, by_cond: dict):
+    """Grouped bar: mean alignment / distractor / clarity by condition."""
+    conds   = list(by_cond.keys())
+    metrics = ["claude_source_alignment", "claude_distractor_quality", "claude_stem_clarity"]
+    labels  = ["Alignment", "Distractor", "Clarity"]
+    colors  = ["#29b6f6", "#ab47bc", "#FFB300"]
+    x = np.arange(len(conds))
+    w = 0.24
+    for i, (m, lab, col) in enumerate(zip(metrics, labels, colors)):
+        means = [np.mean([it[m] for it in by_cond[c] if it[m] is not None])
+                 for c in conds]
+        bars = ax.bar(x + (i - 1) * w, means, w, label=lab, color=col)
+        for bar, v in zip(bars, means):
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.05,
+                    f"{v:.2f}", ha="center", va="bottom", color=TEXT_COL, fontsize=7)
+    ax.set_xticks(x)
+    ax.set_xticklabels([c.replace("/", "/\n") for c in conds], fontsize=8)
+    ax.set_ylim(1, 5.5)
+    style_ax(ax, "Mean Claude Scores by Condition", "Score (1–5)")
+    ax.legend(fontsize=8, labelcolor=TEXT_COL, framealpha=0.2)
+
+
+def cr_agreement_bar(ax, by_cond: dict):
+    """Grouped bar: agrees / partial / disagrees rate by condition."""
+    conds = list(by_cond.keys())
+    label_map = [("True", "Agrees"), ("Partial", "Partial"), ("False", "Disagrees")]
+    x = np.arange(len(conds))
+    w = 0.24
+    for i, (val, lab) in enumerate(label_map):
+        pcts = [sum(1 for it in by_cond[c]
+                    if str(it.get("agrees_with_reviewer", "")) == val)
+                / len(by_cond[c]) * 100 for c in conds]
+        bars = ax.bar(x + (i - 1) * w, pcts, w, label=lab,
+                      color=_CR_AGREE_COLORS[val])
+        for bar, pct in zip(bars, pcts):
+            if pct > 5:
+                ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.4,
+                        f"{pct:.0f}%", ha="center", va="bottom", color=TEXT_COL, fontsize=7)
+    ax.set_xticks(x)
+    ax.set_xticklabels([c.replace("/", "/\n") for c in conds], fontsize=8)
+    style_ax(ax, "Agreement with Human Reviewer", "% of items")
+    ax.legend(fontsize=8, labelcolor=TEXT_COL, framealpha=0.2)
+
+
+def cr_flag_bar(ax, by_cond: dict):
+    """Bar: flag_ambiguity rate by condition."""
+    conds = list(by_cond.keys())
+    rates = [sum(1 for it in by_cond[c] if it.get("flag_ambiguity") is True)
+             / len(by_cond[c]) * 100 for c in conds]
+    bars = ax.bar([c.replace("/", "/\n") for c in conds], rates,
+                  color=[COND_COLORS.get(c, "#78909c") for c in conds], width=0.55)
+    for bar, rate in zip(bars, rates):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.3,
+                f"{rate:.1f}%", ha="center", va="bottom", color=TEXT_COL, fontsize=9)
+    style_ax(ax, "Ambiguity Flag Rate by Condition", "% flagged")
+    ax.set_ylim(0, max(rates) * 1.35 + 2)
+
+
+def cr_decision_heatmap(ax, items: list):
+    """Heatmap: ACCEPT rate by condition × difficulty."""
+    diffs = ["easy", "medium", "hard"]
+    conds = [c for c in COND_ORDER if any(it["condition"] == c for it in items)]
+    matrix = np.zeros((len(conds), len(diffs)))
+    for i, c in enumerate(conds):
+        for j, d in enumerate(diffs):
+            sub = [it for it in items if it["condition"] == c and it["difficulty"] == d]
+            matrix[i, j] = (sum(1 for it in sub if it["claude_decision"] == "ACCEPT")
+                            / len(sub) * 100) if sub else 0
+    im = ax.imshow(matrix, cmap="RdYlGn", vmin=0, vmax=100, aspect="auto")
+    ax.set_xticks(range(len(diffs)))
+    ax.set_xticklabels(diffs, color=TEXT_COL, fontsize=9)
+    ax.set_yticks(range(len(conds)))
+    ax.set_yticklabels(conds, color=TEXT_COL, fontsize=9)
+    for i in range(len(conds)):
+        for j in range(len(diffs)):
+            ax.text(j, i, f"{matrix[i,j]:.0f}%", ha="center", va="center",
+                    color="black" if matrix[i, j] > 50 else "white",
+                    fontsize=10, fontweight="bold")
+    ax.set_title("ACCEPT Rate  (condition × difficulty)", color=TITLE_COL,
+                 fontsize=11, fontweight="bold", pad=8)
+    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04).ax.yaxis.set_tick_params(color=TEXT_COL)
+
+
+def cr_score_heatmap(ax, by_cond: dict):
+    """Heatmap: mean score by condition × metric."""
+    conds   = list(by_cond.keys())
+    metrics = ["claude_source_alignment", "claude_distractor_quality", "claude_stem_clarity"]
+    mlabels = ["Alignment", "Distractor", "Clarity"]
+    matrix  = np.zeros((len(conds), len(metrics)))
+    for i, c in enumerate(conds):
+        for j, m in enumerate(metrics):
+            vals = [it[m] for it in by_cond[c] if it[m] is not None]
+            matrix[i, j] = np.mean(vals) if vals else 0
+    im = ax.imshow(matrix, cmap="Blues", vmin=1, vmax=5, aspect="auto")
+    ax.set_xticks(range(len(metrics)))
+    ax.set_xticklabels(mlabels, color=TEXT_COL, fontsize=9)
+    ax.set_yticks(range(len(conds)))
+    ax.set_yticklabels(conds, color=TEXT_COL, fontsize=9)
+    for i in range(len(conds)):
+        for j in range(len(metrics)):
+            ax.text(j, i, f"{matrix[i,j]:.2f}", ha="center", va="center",
+                    color="black" if matrix[i, j] > 3.5 else "white",
+                    fontsize=10, fontweight="bold")
+    ax.set_title("Mean Claude Score  (condition × metric)", color=TITLE_COL,
+                 fontsize=11, fontweight="bold", pad=8)
+    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04).ax.yaxis.set_tick_params(color=TEXT_COL)
+
+
+def cr_qc_flags_bar(ax, by_cond: dict):
+    """Grouped bar: QC traceability pass rates by condition."""
+    conds = list(by_cond.keys())
+    qc_fields = [
+        ("chunks_support_question",       "Chunks support Q"),
+        ("correct_answer_verifiable",     "Answer verifiable"),
+        ("distractors_clearly_wrong",     "Distractors clear"),
+        ("reviewer_source_call_accurate", "Rev. source OK"),
+    ]
+    qc_colors = ["#29b6f6", "#4CAF50", "#ab47bc", "#FF9800"]
+    x = np.arange(len(conds))
+    w = 0.18
+    for i, ((field, lab), col) in enumerate(zip(qc_fields, qc_colors)):
+        pcts = [sum(1 for it in by_cond[c] if it.get(field) is True)
+                / len(by_cond[c]) * 100 for c in conds]
+        bars = ax.bar(x + (i - 1.5) * w, pcts, w, label=lab, color=col)
+        for bar, pct in zip(bars, pcts):
+            if pct > 5:
+                ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+                        f"{pct:.0f}", ha="center", va="bottom", color=TEXT_COL, fontsize=6)
+    ax.set_xticks(x)
+    ax.set_xticklabels([c.replace("/", "/\n") for c in conds], fontsize=8)
+    ax.set_ylim(0, 115)
+    style_ax(ax, "QC Traceability  (% items passing each flag)", "% True")
+    ax.legend(fontsize=7, labelcolor=TEXT_COL, framealpha=0.2, ncol=2)
+
+
+def cr_reject_breakdown(ax, by_cond: dict):
+    """Grouped bar: REJECT count by condition × difficulty."""
+    conds = list(by_cond.keys())
+    diffs = ["easy", "medium", "hard", "unknown"]
+    dcols = [DIFF_COLORS.get(d, "#546e7a") for d in diffs]
+    x = np.arange(len(conds))
+    w = 0.2
+    shown = set()
+    for j, (d, col) in enumerate(zip(diffs, dcols)):
+        counts = [sum(1 for it in by_cond[c]
+                      if it["claude_decision"] == "REJECT" and it["difficulty"] == d)
+                  for c in conds]
+        if all(v == 0 for v in counts):
+            continue
+        lab = d if d not in shown else "_nolegend_"
+        shown.add(d)
+        bars = ax.bar(x + (j - 1.5) * w, counts, w, label=lab, color=col)
+        for bar, cnt in zip(bars, counts):
+            if cnt > 0:
+                ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.1,
+                        str(cnt), ha="center", va="bottom", color=TEXT_COL, fontsize=8)
+    ax.set_xticks(x)
+    ax.set_xticklabels([c.replace("/", "/\n") for c in conds], fontsize=8)
+    style_ax(ax, "REJECT Count by Condition × Difficulty", "# rejected")
+    ax.legend(fontsize=8, labelcolor=TEXT_COL, framealpha=0.2,
+              title="Difficulty", title_fontsize=8)
+
+
+def run_claude_review_mode(decisions_json: Path, out_dir: Path) -> None:
+    out_dir.mkdir(exist_ok=True)
+    charts_dir = out_dir / "charts"
+    charts_dir.mkdir(exist_ok=True)
+
+    print(f"Loading Claude review data from {decisions_json}")
+    items   = load_claude_review(decisions_json)
+    by_cond = _cr_by_condition(items)
+    print(f"  {len(items)} items across {len(by_cond)} conditions")
+
+    CHART_SPECS = [
+        ("01_decisions_by_condition",  lambda ax: cr_decisions_bar(ax, by_cond),      8, 5.5),
+        ("02_scores_by_condition",     lambda ax: cr_score_bars(ax, by_cond),          9, 5.5),
+        ("03_agreement_with_reviewer", lambda ax: cr_agreement_bar(ax, by_cond),       8, 5.5),
+        ("04_flag_rate",               lambda ax: cr_flag_bar(ax, by_cond),            7, 5.0),
+        ("05_decision_heatmap",        lambda ax: cr_decision_heatmap(ax, items),      7, 4.5),
+        ("06_score_heatmap",           lambda ax: cr_score_heatmap(ax, by_cond),       7, 4.5),
+        ("07_qc_flags",                lambda ax: cr_qc_flags_bar(ax, by_cond),       10, 5.5),
+        ("08_reject_breakdown",        lambda ax: cr_reject_breakdown(ax, by_cond),    9, 5.5),
+    ]
+
+    for slug, fn, w, h in CHART_SPECS:
+        fig, ax = plt.subplots(figsize=(w, h))
+        fig.patch.set_facecolor(BG)
+        fn(ax)
+        path = charts_dir / f"{slug}.png"
+        fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=BG)
+        plt.close(fig)
+        print(f"  chart: {path.name}")
+
+    # Dashboard 2×4
+    fig = plt.figure(figsize=(22, 14))
+    fig.patch.set_facecolor(BG)
+    gs = gridspec.GridSpec(2, 4, figure=fig, hspace=0.52, wspace=0.40,
+                           left=0.05, right=0.97, top=0.92, bottom=0.06)
+    cr_decisions_bar(fig.add_subplot(gs[0, 0]), by_cond)
+    cr_score_bars(fig.add_subplot(gs[0, 1]), by_cond)
+    cr_agreement_bar(fig.add_subplot(gs[0, 2]), by_cond)
+    cr_flag_bar(fig.add_subplot(gs[0, 3]), by_cond)
+    cr_decision_heatmap(fig.add_subplot(gs[1, 0]), items)
+    cr_score_heatmap(fig.add_subplot(gs[1, 1]), by_cond)
+    cr_qc_flags_bar(fig.add_subplot(gs[1, 2]), by_cond)
+    cr_reject_breakdown(fig.add_subplot(gs[1, 3]), by_cond)
+    fig.suptitle(
+        "domainRag  —  Claude Human Review  (615 items  ·  4 conditions)",
+        color=TITLE_COL, fontsize=13, fontweight="bold", y=0.965,
+    )
+    dash = out_dir / "dashboard.png"
+    fig.savefig(dash, dpi=150, bbox_inches="tight", facecolor=BG)
+    plt.close(fig)
+    print(f"\ndashboard: {dash}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Entry point
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -792,11 +1064,17 @@ def main():
                         help="Path to runs folder (per-batch mode)")
     parser.add_argument("--merged", metavar="MASTER_XLSX",
                         help="Path to merged_master.xlsx (merged mode)")
+    parser.add_argument("--claude-review", metavar="DECISIONS_JSON",
+                        help="Path to claude_review_decisions.json (Claude Review mode)")
     args = parser.parse_args()
 
     script_dir = Path(__file__).parent
 
-    if args.merged:
+    if args.claude_review:
+        decisions = Path(args.claude_review)
+        out_dir   = script_dir / "claude-review"
+        run_claude_review_mode(decisions, out_dir)
+    elif args.merged:
         master = Path(args.merged)
         out_dir = script_dir / "merged"
         out_dir.mkdir(exist_ok=True)

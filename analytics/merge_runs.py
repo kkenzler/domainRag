@@ -23,11 +23,11 @@ from openpyxl import Workbook
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 # Ordered batch labels — determines sheet ordering and comparison axis
-BATCH_ORDER = ["3-16-26", "haiku-reviewer", "haiku-generator", "haiku-both"]
+BATCH_ORDER = ["local-local", "haiku-reviewer", "haiku-generator", "haiku-both"]
 
 # Map folder name → human-readable condition label
 BATCH_LABELS = {
-    "3-16-26":          "local/local",
+    "local-local":      "local/local",
     "haiku-reviewer":   "local/haiku",
     "haiku-generator":  "haiku/local",
     "haiku-both":       "haiku/haiku",
