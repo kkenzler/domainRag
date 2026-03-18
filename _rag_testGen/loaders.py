@@ -252,18 +252,28 @@ def load_mp4(path: Path) -> tuple[str, int]:
     duration = info.duration
 
     lines = []
-    last_pct = -1
     for segment in segments:
         h = int(segment.start // 3600)
         m = int((segment.start % 3600) // 60)
         s = int(segment.start % 60)
         lines.append(f"[{h:02}:{m:02}:{s:02}] {segment.text.strip()}")
-        pct_int = int(min(segment.end / duration, 1.0) * 100) if duration > 0 else 0
-        if pct_int >= last_pct + 10:
-            last_pct = pct_int
-            filled = pct_int * 40 // 100
-            bar = "#" * filled + "-" * (40 - filled)
-            print(f"  [mp4] [{bar}] {pct_int}%", flush=True)
+        pct = min(segment.end / duration, 1.0) if duration > 0 else 0
+        filled = int(40 * pct)
+        bar = "#" * filled + "-" * (40 - filled)
+        sys.stderr.write(f"\r  [mp4] [{bar}] {pct*100:.1f}%")
+        sys.stderr.flush()
+
+    sys.stderr.write("\n")
+    sys.stderr.flush()
+
+    # Free CUDA resources before returning — prevents stack overrun on Windows
+    # when the next pipeline stage initialises its own native libraries.
+    del model
+    try:
+        import torch
+        torch.cuda.empty_cache()
+    except Exception:
+        pass
 
     print(f"  [mp4] Done. Writing transcript: {sidecar.name}", flush=True)
     text = "\n".join(lines)
