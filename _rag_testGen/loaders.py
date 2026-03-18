@@ -303,6 +303,13 @@ def load_document(path: Path) -> Optional[LoadedDoc]:
     elif ext == ".pptx":
         raw_text, page_count = load_pptx(path)
     elif ext == ".mp4":
+        # Skip transcription if a richer format with the same stem exists —
+        # it will be ingested directly and covers the same content.
+        _covered_by = {".docx", ".pdf", ".pptx"}
+        covering = next((path.with_suffix(s) for s in _covered_by if path.with_suffix(s).exists()), None)
+        if covering:
+            print(f"  [mp4] Skipping {path.name} — content covered by {covering.name}", flush=True)
+            return None
         raw_text, page_count = load_mp4(path)
     else:
         return None
