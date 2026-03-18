@@ -259,7 +259,7 @@ def load_mp4(path: Path) -> tuple[str, int]:
         lines.append(f"[{h:02}:{m:02}:{s:02}] {segment.text.strip()}")
         pct = min(segment.end / duration, 1.0) if duration > 0 else 0
         filled = int(40 * pct)
-        bar = "█" * filled + "░" * (40 - filled)
+        bar = "#" * filled + "-" * (40 - filled)
         print(f"\r  [mp4] [{bar}] {pct*100:.1f}%", end="", flush=True)
 
     print(f"\r  [mp4] Done. Writing transcript: {sidecar.name}" + " " * 20, flush=True)
