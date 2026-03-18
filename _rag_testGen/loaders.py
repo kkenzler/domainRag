@@ -293,6 +293,8 @@ def load_document(path: Path) -> Optional[LoadedDoc]:
     sha = sha256_file(path)
 
     if ext in {".txt", ".md"}:
+        if path.with_suffix(".mp4").exists():
+            return None  # sidecar transcript — handled via the .mp4 entry
         raw_text, page_count = load_text_file(path)
     elif ext == ".docx":
         raw_text, page_count = load_docx(path)
