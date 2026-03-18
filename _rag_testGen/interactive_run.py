@@ -478,7 +478,8 @@ def _run_chat_mode(values: dict[str, str]) -> None:
         print(f"WARNING: Could not query rag_chunks ({e}). DB may be empty.")
         n_chunks = 0
 
-    print(f"\nCorpus Chat  |  model: {model}  |  type 'exit' to return\n")
+    print(f"\nCorpus Chat  |  model: {model}")
+    print(f"  exit / back = return to menu   Ctrl+C = quit\n")
 
     while True:
         try:
@@ -590,11 +591,17 @@ def main() -> None:
     persisted = load_config_env(config_path)
     values.update(persisted)
 
+    _SEP = "=" * 52
+
     while True:
-        print("\n" + "-"*50)
+        print(f"\n{_SEP}")
         try:
-            update = input("Update settings? (Y/N, default N): ").strip().lower()
+            update = input("  Update settings?  Y = yes   X = quit   Enter = skip\n  > ").strip().lower()
         except (EOFError, KeyboardInterrupt):
+            print("\nExiting.")
+            break
+
+        if update == "x":
             print("\nExiting.")
             break
 
@@ -616,22 +623,39 @@ def main() -> None:
                 if new_key and new_key.strip():
                     os.environ["LLM_API_KEY"] = new_key.strip()
 
-        print("\nRun mode:")
-        print("  F = Full           (ingest + generate + analytics)")
-        print("  P = Pipeline       (ingest + generate, skip analytics)")
-        print("  I = Ingest only    (extract knowledge chunks, write XLSX)")
-        print("  G = Generate only  (use existing DB chunks, RAG mode)")
-        print("  A = Analytics only (viz on most recent run)")
-        print("  Q = Query          (interactive SQL chat, explore corpus DB)")
+        print(f"\n{_SEP}")
+        print("  Run mode\n")
+        print("  ── Batch / Pipeline " + "─" * 31)
+        print("  B  Batch run    generate (from db) + analytics")
+        print("  P  Pipeline     ingest + generate")
+        print("  F  Full         ingest + generate + analytics")
+        print()
+        print("  ── Step by step " + "─" * 35)
+        print("  I  Ingest only  extract knowledge chunks, write XLSX")
+        print("  G  Generate     use existing db chunks")
+        print("  A  Analytics    viz on most recent run")
+        print()
+        print("  ── Tools " + "─" * 42)
+        print("  Q  Query        interactive SQL chat, explore corpus db")
+        print()
+        print("  Enter = back to settings   X = quit")
+        print(_SEP)
 
         try:
-            run_choice = input("Choice (F / P / I / G / A / Q): ").strip().upper()
+            run_choice = input("  > ").strip().upper()
         except (EOFError, KeyboardInterrupt):
             print("\nExiting.")
             break
 
-        if run_choice not in {"F", "P", "I", "G", "A", "Q"}:
-            print("Invalid choice. Try again.")
+        if not run_choice:
+            continue  # back to settings prompt
+
+        if run_choice == "X":
+            print("\nExiting.")
+            break
+
+        if run_choice not in {"B", "F", "P", "I", "G", "A", "Q"}:
+            print("  Invalid choice. Try again.")
             continue
 
         if run_choice == "Q":
@@ -670,7 +694,7 @@ def main() -> None:
         elif run_choice == "I":
             cmd = [python, cli, "pipeline", "--force-ingest", "--clear-first", "--ingest-only"]
             log_file = log_dir / "console_pipeline.txt"
-        else:  # G
+        else:  # B or G
             cmd = [python, cli, "generate"]
             log_file = log_dir / "console_generate.txt"
 
@@ -682,7 +706,7 @@ def main() -> None:
         ]:
             if values.get(env_key, "true").lower() in {"0", "false", "no", "n"}:
                 if flag in ("--no-checkpoint-items", "--no-checkpoint-review"):
-                    if run_choice in {"F", "P", "G"}:
+                    if run_choice in {"F", "P", "B", "G"}:
                         cmd.append(flag)
                 elif flag == "--no-checkpoint-chunks":
                     if run_choice in {"F", "P", "I"}:
@@ -702,7 +726,7 @@ def main() -> None:
         checkpoint_enabled = any(
             values.get(k, "true").lower() not in {"0", "false", "no", "n"}
             for k in ["CHECKPOINT_CHUNKS", "CHECKPOINT_ITEMS", "CHECKPOINT_REVIEW"]
-        ) and run_choice in {"F", "P", "G", "I"}
+        ) and run_choice in {"F", "P", "B", "G", "I"}
 
         if checkpoint_enabled:
             # Direct run — stdin passes through for interactive checkpoints
@@ -741,7 +765,7 @@ def main() -> None:
         if lmstudio_log:
             _capture_lmstudio_logs(lmstudio_log, log_dir / "lmstudio.log")
 
-        if run_choice == "F" and returncode == 0:
+        if run_choice in {"F", "B"} and returncode == 0:
             _run_analytics(log_dir, rag_root_val)
 
         try:
