@@ -240,7 +240,7 @@ def _run_tee(cmd: list[str], log_path: Path, env: dict[str, str]) -> int:
         proc = subprocess.Popen(
             cmd,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
+            stderr=None,   # inherit: goes direct to terminal so \r progress bars work
             env=env,
             text=True,
             encoding="utf-8",
