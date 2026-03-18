@@ -35,10 +35,12 @@ from loaders import load_document, LoadedDoc
 from db_pgvector import (
     chunks_rowcount,
     ensure_schema,
+    migrate_corpus_label,
     get_db_snapshot_per_doc,
     get_db_snapshot_summary,
     get_random_chunks,
     similarity_search,
+    clear_corpus,
 )
 
 from text_utils import (
@@ -69,6 +71,7 @@ class GenerateConfig:
     # Provider fields — "lmstudio" or api_provider string
     generate_provider: str = "lmstudio"
     review_provider: str = "lmstudio"
+    corpus_label: str = ""   # filters similarity search and random chunk selection to this corpus
     top_k: int = 6
     temperature_gen: float = 0.2
     temperature_review: float = 0.0
@@ -118,6 +121,7 @@ class PipelineConfig:
     ingest_provider: str = "local"
     generate_provider: str = "local"
     review_provider: str = "local"
+    corpus_label: str = ""   # derived from domain_dir basename when blank
     embedding_dim: object = None
     batch_size: int = 32
     clear_first: bool = False
@@ -557,9 +561,19 @@ def _infer_embedding_dim_from_db(conn: psycopg.Connection) -> int:
     raise RuntimeError(f"Cannot infer embedding_dim from embedding::text: {s[:80]}")
 
 
-def _build_chunk_preview_rows(conn: psycopg.Connection) -> list[dict[str, Any]]:
+def _build_chunk_preview_rows(conn: psycopg.Connection, corpus_label: str = "") -> list[dict[str, Any]]:
     with conn.cursor() as cur:
-        cur.execute("SELECT doc_path, chunk_index, chunk_text FROM rag_chunks ORDER BY doc_path, chunk_index;")
+        if corpus_label:
+            cur.execute(
+                """
+                SELECT doc_path, chunk_index, chunk_text FROM rag_chunks
+                WHERE corpus_label = %s
+                ORDER BY doc_path, chunk_index;
+                """,
+                (corpus_label,),
+            )
+        else:
+            cur.execute("SELECT doc_path, chunk_index, chunk_text FROM rag_chunks ORDER BY doc_path, chunk_index;")
         rows = cur.fetchall() or []
     preview: list[dict[str, Any]] = []
     for doc_path, chunk_index, chunk_text in rows:
@@ -707,8 +721,14 @@ def generate_from_db(cfg: GenerateConfig) -> dict[str, Any]:
     elapsed_gen = 0.0
     elapsed_review = 0.0
 
+    corpus_label = (cfg.corpus_label or "").strip()
+
     with psycopg.connect(cfg.db_dsn) as conn:
-        if chunks_rowcount(conn) <= 0:
+        if chunks_rowcount(conn, corpus_label) <= 0:
+            if corpus_label:
+                raise RuntimeError(
+                    "DB has 0 chunks for corpus_label=%r. Run ingest first." % corpus_label
+                )
             raise RuntimeError("DB has 0 chunks. Run ingest first.")
 
         embedding_dim = _infer_embedding_dim_from_db(conn)
@@ -722,7 +742,7 @@ def generate_from_db(cfg: GenerateConfig) -> dict[str, Any]:
                 file=sys.stderr, flush=True,
             )
 
-            seed_rows = get_random_chunks(conn, n=1)
+            seed_rows = get_random_chunks(conn, n=1, corpus_label=corpus_label)
             seed_text = seed_rows[0]["chunk_text"]
             seed_doc = seed_rows[0].get("doc_path", "")
 
@@ -731,7 +751,7 @@ def generate_from_db(cfg: GenerateConfig) -> dict[str, Any]:
                 [seed_text],
             )[0]
 
-            retrieved = similarity_search(conn, seed_emb, int(cfg.top_k))
+            retrieved = similarity_search(conn, seed_emb, int(cfg.top_k), corpus_label=corpus_label)
 
             for r in retrieved:
                 trace_rows.append({
@@ -797,9 +817,9 @@ def generate_from_db(cfg: GenerateConfig) -> dict[str, Any]:
             if cfg.sleep_seconds:
                 time.sleep(float(cfg.sleep_seconds))
 
-        db_snap_summary = get_db_snapshot_summary(conn)
-        db_snap_per_doc = get_db_snapshot_per_doc(conn)
-        chunk_preview = _build_chunk_preview_rows(conn)
+        db_snap_summary = get_db_snapshot_summary(conn, corpus_label=corpus_label)
+        db_snap_per_doc = get_db_snapshot_per_doc(conn, corpus_label=corpus_label)
+        chunk_preview = _build_chunk_preview_rows(conn, corpus_label=corpus_label)
 
     # Checkpoint 2: human reviews items
     if cfg.checkpoint_items:
@@ -893,6 +913,7 @@ def generate_from_db(cfg: GenerateConfig) -> dict[str, Any]:
         "created_at": created_at,
         "run_id": cfg.run_id,
         "mode": "rag",
+        "corpus_label": corpus_label,
         "condition_label": condition_label,
         "lm_url": cfg.lm_url,
         "embed_model": cfg.embed_model,
@@ -1172,8 +1193,12 @@ def run_pipeline(cfg: PipelineConfig) -> dict[str, Any]:
 
     prompts_dir = Path(cfg.prompts_dir)
 
+    # Derive corpus_label from domain_dir basename when not explicitly set.
+    corpus_label = (cfg.corpus_label or "").strip() or Path(cfg.domain_dir).resolve().name
+
     with psycopg.connect(cfg.db_dsn) as conn:
-        has_chunks = chunks_rowcount(conn) > 0
+        migrate_corpus_label(conn)
+        has_chunks = chunks_rowcount(conn, corpus_label) > 0
 
     if cfg.force_ingest or not has_chunks:
         ingest_ran = True
@@ -1187,6 +1212,7 @@ def run_pipeline(cfg: PipelineConfig) -> dict[str, Any]:
             api_provider=cfg.api_provider,
             api_model=cfg.api_model,
             ingest_provider=cfg.ingest_provider,
+            corpus_label=corpus_label,
             embedding_dim=int(cfg.embedding_dim) if cfg.embedding_dim is not None else None,
             batch_size=int(cfg.batch_size),
             clear_first=bool(cfg.clear_first),
@@ -1202,7 +1228,7 @@ def run_pipeline(cfg: PipelineConfig) -> dict[str, Any]:
         # Checkpoint 1: review chunks just written to DB
         if cfg.checkpoint_chunks:
             with psycopg.connect(cfg.db_dsn) as _cp1_conn:
-                _cp1_rows = _build_chunk_preview_rows(_cp1_conn)
+                _cp1_rows = _build_chunk_preview_rows(_cp1_conn, corpus_label=corpus_label)
             _cp1_by_doc = {}
             for r in _cp1_rows:
                 key = r.get("rel_path") or r.get("doc_path", "unknown")
@@ -1220,6 +1246,7 @@ def run_pipeline(cfg: PipelineConfig) -> dict[str, Any]:
             "created_at": created_at,
             "run_id": run_id,
             "mode": "ingest_only",
+            "corpus_label": corpus_label,
             "lm_url": cfg.lm_url,
             "embed_model": cfg.embed_model,
             "context_model": cfg.context_model,
@@ -1229,9 +1256,9 @@ def run_pipeline(cfg: PipelineConfig) -> dict[str, Any]:
         }
 
         with psycopg.connect(cfg.db_dsn) as conn:
-            db_snap_summary = get_db_snapshot_summary(conn)
-            db_snap_per_doc = get_db_snapshot_per_doc(conn)
-            chunk_preview = _build_chunk_preview_rows(conn)
+            db_snap_summary = get_db_snapshot_summary(conn, corpus_label=corpus_label)
+            db_snap_per_doc = get_db_snapshot_per_doc(conn, corpus_label=corpus_label)
+            chunk_preview = _build_chunk_preview_rows(conn, corpus_label=corpus_label)
 
         manifest = {"created_at": created_at, "config": meta}
         manifest_path = out_dir / f"run_manifest_{run_id}.json"
@@ -1253,6 +1280,7 @@ def run_pipeline(cfg: PipelineConfig) -> dict[str, Any]:
             "ingest_ran": ingest_ran,
             "ingest_summary": ingest_summary,
             "ingest_only": True,
+            "corpus_label": corpus_label,
             "files": {"xlsx": str(xlsx_path), "manifest_json": str(manifest_path)},
         }
 
@@ -1269,6 +1297,7 @@ def run_pipeline(cfg: PipelineConfig) -> dict[str, Any]:
         out_dir=Path(cfg.out_dir),
         generate_provider=cfg.generate_provider,
         review_provider=cfg.review_provider,
+        corpus_label=corpus_label,
         top_k=int(cfg.top_k),
         sleep_seconds=float(cfg.sleep_seconds),
         checkpoint_items=bool(cfg.checkpoint_items),
@@ -1279,5 +1308,6 @@ def run_pipeline(cfg: PipelineConfig) -> dict[str, Any]:
     return {
         "ingest_ran": ingest_ran,
         "ingest_summary": ingest_summary,
+        "corpus_label": corpus_label,
         "generate_summary": generate_summary,
     }
