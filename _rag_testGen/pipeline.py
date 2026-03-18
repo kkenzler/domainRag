@@ -11,7 +11,7 @@ Three checkpoints (each can be skipped via config):
   CHECKPOINT_ITEMS    — human reviews generated MCQ items before review
   CHECKPOINT_REVIEW   — human sees reviewer flags and can correct items
 
-Checkpoints are console-based for now. runner.py owns the outer loop.
+Checkpoints are console-based for now. interactive_run.py owns the outer loop.
 """
 
 import json

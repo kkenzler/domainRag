@@ -26,7 +26,7 @@ _rag_testGen/
 ├── embed_lmstudio.py       # LM Studio /v1/embeddings client (embeddings remain local)
 ├── db_pgvector.py          # All Postgres/pgvector DB access (schema, upsert, search, snapshots)
 ├── text_utils.py           # Generator output cleaning, schema validation, reviewer hygiene
-├── runner.py               # Cross-platform launcher: config persistence, run mode, log capture, run-again loop
+├── interactive_run.py               # Cross-platform launcher: config persistence, run mode, log capture, run-again loop
 ├── __init__.py             # Package marker
 ├── __main__.py             # Allows `python -m _rag_testGen`
 ├── _prompts/
@@ -47,8 +47,8 @@ _rag_testGen/
 │       └── docker_CONTAINERNAME.log
 └── config.env              # Auto-written plain KEY=VALUE (no shell syntax)
 
-_run_testGen.bat            # Windows thin shim — calls runner.py
-_run_testGen.sh             # Mac/Linux thin shim — calls runner.py (chmod +x required)
+_run_testGen.bat            # Windows thin shim — calls interactive_run.py
+_run_testGen.sh             # Mac/Linux thin shim — calls interactive_run.py (chmod +x required)
 ```
 
 ---
@@ -56,10 +56,10 @@ _run_testGen.sh             # Mac/Linux thin shim — calls runner.py (chmod +x 
 ## Launcher
 
 Both `_run_testGen.bat` (Windows) and `_run_testGen.sh` (Mac/Linux) are thin shims that
-simply call `python runner.py` or `python3 runner.py`. All orchestration logic lives in
-`runner.py`.
+simply call `python interactive_run.py` or `python3 interactive_run.py`. All orchestration logic lives in
+`interactive_run.py`.
 
-### `runner.py`
+### `interactive_run.py`
 
 - Loads and saves `config.env`
 - Prompts user: update settings? (Y/N), shows current values
@@ -84,7 +84,7 @@ simply call `python runner.py` or `python3 runner.py`. All orchestration logic l
 
 ```
 _run_testGen.bat / _run_testGen.sh
-  └── runner.py
+  └── interactive_run.py
         └── cli.py  (pipeline / generate / ingest / baseline subcommand)
               ├── ingest phase:
               │     loaders.py → load_document()         [text extraction, all types]
@@ -176,7 +176,7 @@ _run_testGen.bat / _run_testGen.sh
 
 ## Configuration (`config.env`)
 
-Plain `KEY=VALUE` file, no shell syntax. Written by `runner.py`. `LLM_API_KEY` is never
+Plain `KEY=VALUE` file, no shell syntax. Written by `interactive_run.py`. `LLM_API_KEY` is never
 written here — entered at runtime via masked prompt, stored only in process environment.
 
 ```
@@ -339,7 +339,7 @@ Generation stays local (free). Haiku reviewer will provide meaningful, independe
 
 ## Current Known State
 
-- `runner.py` implemented and working; BAT/SH are thin shims
+- `interactive_run.py` implemented and working; BAT/SH are thin shims
 - `llm_client.py` replaces `lmstudio_client.py` — unified provider abstraction with vision support
 - Context model runs at ingest time (not query time); old context-rewrite-at-query-time agent removed
 - PDF ingest uses vision (rendered pages for lmstudio, native PDF for anthropic)
