@@ -535,6 +535,46 @@ def _run_chat_mode(values: dict[str, str]) -> None:
     conn.close()
 
 
+# ---------------------------------------------------------------------------
+# Analytics helpers
+# ---------------------------------------------------------------------------
+
+def _analytics_script(rag_root: Path) -> Path:
+    return rag_root.parent / "analytics" / "analyticsVizs.py"
+
+
+def _run_analytics(log_dir: Path, rag_root: Path) -> None:
+    """Run analyticsVizs.py on a completed run's log directory."""
+    script = _analytics_script(rag_root)
+    if not script.exists():
+        print(f"\n[analytics] analyticsVizs.py not found at {script} — skipping.")
+        print("[analytics] (analytics/ is local-only; copy scripts there to enable viz)")
+        return
+    print(f"\n[analytics] Running viz on {log_dir.name} ...")
+    result = subprocess.run([sys.executable, str(script), str(log_dir)])
+    if result.returncode != 0:
+        print(f"[analytics] Exited with code {result.returncode}")
+    else:
+        print(f"[analytics] Done.")
+
+
+def _run_analytics_latest(rag_root: Path) -> None:
+    """Find the most recent run and run analytics on it."""
+    script = _analytics_script(rag_root)
+    if not script.exists():
+        print(f"\n[analytics] analyticsVizs.py not found at {script}")
+        print("[analytics] (analytics/ is local-only; copy scripts there to enable viz)")
+        return
+    runs_dir = rag_root / "runs"
+    candidates = sorted(runs_dir.glob("logs_*"), key=lambda p: p.name) if runs_dir.exists() else []
+    if not candidates:
+        print("\n[analytics] No run directories found in runs/. Run F or P first.")
+        return
+    latest = candidates[-1]
+    print(f"\n[analytics] Most recent run: {latest.name}")
+    _run_analytics(latest, rag_root)
+
+
 def main() -> None:
     # Determine rag_root: the directory containing runner.py
     rag_root = Path(__file__).resolve().parent
@@ -577,19 +617,20 @@ def main() -> None:
                     os.environ["LLM_API_KEY"] = new_key.strip()
 
         print("\nRun mode:")
-        print("  F = Full pipeline (ingest + generate, RAG mode)")
-        print("  I = Ingest only   (extract knowledge chunks, write XLSX)")
-        print("  G = Generate only (use existing DB chunks, RAG mode)")
-        print("  B = Baseline      (no-RAG, load docs directly)")
-        print("  Q = Query         (interactive SQL chat, explore corpus DB)")
+        print("  F = Full           (ingest + generate + analytics)")
+        print("  P = Pipeline       (ingest + generate, skip analytics)")
+        print("  I = Ingest only    (extract knowledge chunks, write XLSX)")
+        print("  G = Generate only  (use existing DB chunks, RAG mode)")
+        print("  A = Analytics only (viz on most recent run)")
+        print("  Q = Query          (interactive SQL chat, explore corpus DB)")
 
         try:
-            run_choice = input("Choice (F / I / G / B / Q): ").strip().upper()
+            run_choice = input("Choice (F / P / I / G / A / Q): ").strip().upper()
         except (EOFError, KeyboardInterrupt):
             print("\nExiting.")
             break
 
-        if run_choice not in {"F", "I", "G", "B", "Q"}:
+        if run_choice not in {"F", "P", "I", "G", "A", "Q"}:
             print("Invalid choice. Try again.")
             continue
 
@@ -605,11 +646,14 @@ def main() -> None:
             print("Update RAG_ROOT in settings.")
             continue
 
-        if run_choice != "B":
-            domain_dir = values.get("DOMAIN_DIR", "")
-            if not domain_dir or not Path(domain_dir).exists():
-                print(f"\nERROR: DOMAIN_DIR not found: {domain_dir}")
-                continue
+        if run_choice == "A":
+            _run_analytics_latest(rag_root_val)
+            continue
+
+        domain_dir = values.get("DOMAIN_DIR", "")
+        if not domain_dir or not Path(domain_dir).exists():
+            print(f"\nERROR: DOMAIN_DIR not found: {domain_dir}")
+            continue
 
         run_id = _utc_now()
         log_dir = rag_root_val / "runs" / f"logs_{run_id}"
@@ -620,18 +664,15 @@ def main() -> None:
         python = sys.executable
         cli = str(cli_path)
 
-        if run_choice == "F":
+        if run_choice in {"F", "P"}:
             cmd = [python, cli, "pipeline", "--force-ingest", "--clear-first"]
             log_file = log_dir / "console_pipeline.txt"
         elif run_choice == "I":
             cmd = [python, cli, "pipeline", "--force-ingest", "--clear-first", "--ingest-only"]
             log_file = log_dir / "console_pipeline.txt"
-        elif run_choice == "G":
+        else:  # G
             cmd = [python, cli, "generate"]
             log_file = log_dir / "console_generate.txt"
-        else:  # B
-            cmd = [python, cli, "baseline"]
-            log_file = log_dir / "console_baseline.txt"
 
         # Handle checkpoint flags from config
         for flag, env_key in [
@@ -641,10 +682,10 @@ def main() -> None:
         ]:
             if values.get(env_key, "true").lower() in {"0", "false", "no", "n"}:
                 if flag in ("--no-checkpoint-items", "--no-checkpoint-review"):
-                    if run_choice in {"F", "G", "B"}:
+                    if run_choice in {"F", "P", "G"}:
                         cmd.append(flag)
                 elif flag == "--no-checkpoint-chunks":
-                    if run_choice in {"F", "I"}:
+                    if run_choice in {"F", "P", "I"}:
                         cmd.append(flag)
 
         _write_run_info(log_dir / "run_info.txt", values, run_id, {"RUN_START": _utc_iso()})
@@ -661,7 +702,7 @@ def main() -> None:
         checkpoint_enabled = any(
             values.get(k, "true").lower() not in {"0", "false", "no", "n"}
             for k in ["CHECKPOINT_CHUNKS", "CHECKPOINT_ITEMS", "CHECKPOINT_REVIEW"]
-        ) and run_choice in {"F", "G", "B", "I"}
+        ) and run_choice in {"F", "P", "G", "I"}
 
         if checkpoint_enabled:
             # Direct run — stdin passes through for interactive checkpoints
@@ -699,6 +740,9 @@ def main() -> None:
         lmstudio_log = values.get("LMSTUDIO_LOGPATH", "")
         if lmstudio_log:
             _capture_lmstudio_logs(lmstudio_log, log_dir / "lmstudio.log")
+
+        if run_choice == "F" and returncode == 0:
+            _run_analytics(log_dir, rag_root_val)
 
         try:
             again = input("\nRun again? (Y/N, default N): ").strip().lower()
