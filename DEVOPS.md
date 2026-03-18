@@ -444,6 +444,17 @@ single-model generation?
 
 ---
 
+## Client Corpus — IP Protection (HARD RULE)
+
+NEVER read, list, glob, or inspect files inside `C:\Users\kadek\Desktop\agentFundamentals\`,
+`_client_corpus/`, or `_private_corpus/`. Contents are client IP.
+
+- All pipeline stages MUST be LOCAL: `INGEST_PROVIDER=local`, `GENERATE_PROVIDER=local`, `REVIEW_PROVIDER=local`
+- No client data to cloud APIs under any circumstances
+- You may read `config.env` (holds path string) and run logs — not the corpus files themselves
+
+---
+
 ## Constraints and Conventions
 
 - Minimal diffs; full-file replacements preferred when changes are extensive
