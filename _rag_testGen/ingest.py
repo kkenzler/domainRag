@@ -24,7 +24,7 @@ import psycopg
 from dataclasses import dataclass
 from pathlib import Path
 
-from db_pgvector import clear_chunks, ensure_schema, set_meta_if_absent, set_meta, upsert_chunks
+from db_pgvector import clear_corpus, ensure_schema, set_meta_if_absent, set_meta, upsert_chunks
 from embed_lmstudio import EmbedConfig, embed_texts
 from llm_client import call_llm, call_llm_vision, render_pdf_pages_b64, validate_provider_and_key
 from loaders import load_document
@@ -41,6 +41,7 @@ class IngestConfig:
     api_provider: str              # anthropic | openai | gemini
     api_model: str                 # API model name
     ingest_provider: str           # "local" or "api"
+    corpus_label: str = ""         # tags all chunks from this ingest run; derived from domain_dir basename if blank
     embedding_dim: object = None   # int or None
     batch_size: int = 32
     clear_first: bool = False
@@ -331,6 +332,9 @@ def ingest_domain(cfg, prompts_dir):
     if not domain_dir.exists():
         raise RuntimeError("domain_dir not found: %s" % domain_dir)
 
+    # Derive corpus_label from domain_dir basename when not explicitly set.
+    corpus_label = (cfg.corpus_label or "").strip() or domain_dir.name
+
     context_system, context_user_template = _load_context_prompts(prompts_dir)
 
     # Validate API key up front if using API for ingest
@@ -338,6 +342,21 @@ def ingest_domain(cfg, prompts_dir):
         api_key = (os.environ.get("LLM_API_KEY") or "").strip()
         validate_provider_and_key(cfg.api_provider, api_key, context="ingest")
 
+    _W = 54
+    def _hdr(label: str) -> None:
+        inner = f"  {label}  "
+        pad = max(0, _W - len(inner))
+        left = pad // 2
+        right = pad - left
+        print(f"\n{'=' * _W}", file=sys.stderr, flush=True)
+        print(f"{'=' * left}{inner}{'=' * right}", file=sys.stderr, flush=True)
+        print(f"{'=' * _W}", file=sys.stderr, flush=True)
+
+    def _sub(label: str) -> None:
+        dashes = max(4, _W - len(label) - 3)
+        print(f"\n-------- {label} " + "-" * dashes, file=sys.stderr, flush=True)
+
+    _sub("Loading documents")
     loaded = []
     skipped = 0
     for p in iter_domain_files(domain_dir):
@@ -348,7 +367,11 @@ def ingest_domain(cfg, prompts_dir):
         loaded.append(doc)
 
     docs_total = len(loaded)
-    print("Ingesting %d docs from %s" % (docs_total, domain_dir), file=sys.stderr, flush=True)
+    _hdr("INGEST  —  %d docs  |  corpus: %s" % (docs_total, corpus_label))
+    print(
+        "  domain : %s" % domain_dir,
+        file=sys.stderr, flush=True,
+    )
 
     embedding_dim = cfg.embedding_dim
     if embedding_dim is None:
@@ -368,7 +391,13 @@ def ingest_domain(cfg, prompts_dir):
         _set_meta(conn, "source_root", str(domain_dir))
         _set_meta(conn, "batch_size", str(int(cfg.batch_size)))
 
-        cleared = clear_chunks(conn) if cfg.clear_first else 0
+        # --clear-first deletes only rows for this corpus, not the whole table.
+        cleared = clear_corpus(conn, corpus_label) if cfg.clear_first else 0
+        if cfg.clear_first:
+            print(
+                "  Cleared %d existing chunks for corpus_label=%r" % (cleared, corpus_label),
+                file=sys.stderr, flush=True,
+            )
 
         pending_texts = []
         pending_rows = []
@@ -396,7 +425,7 @@ def ingest_domain(cfg, prompts_dir):
             pending_rows.clear()
 
         for i, doc in enumerate(loaded):
-            print("  Processing %s ..." % doc.path.name, file=sys.stderr, flush=True)
+            _sub("Doc %d/%d  —  %s" % (i + 1, docs_total, doc.path.name))
 
             knowledge_chunks = extract_knowledge_chunks(
                 doc, cfg, context_system, context_user_template
@@ -406,12 +435,14 @@ def ingest_domain(cfg, prompts_dir):
             for chunk_index, chunk_text in enumerate(knowledge_chunks):
                 pending_texts.append(chunk_text)
                 pending_rows.append({
+                    "corpus_label": corpus_label,
                     "doc_path": str(doc.path),
                     "doc_sha256": doc.sha256,
                     "chunk_index": chunk_index,
                     "chunk_text": chunk_text,
                     "embedding": None,
                     "meta": {
+                        "corpus_label": corpus_label,
                         "source_root": str(domain_dir),
                         "rel_path": str(doc.path.resolve().relative_to(domain_dir)),
                         "chunk_id": _chunk_id(doc.sha256, chunk_text),
@@ -434,12 +465,13 @@ def ingest_domain(cfg, prompts_dir):
         _flush_batch()
 
     print(
-        "Ingest complete: %d chunks upserted from %d docs"
-        % (rows_total, docs_total),
+        "Ingest complete: %d chunks upserted from %d docs (corpus_label=%r)"
+        % (rows_total, docs_total, corpus_label),
         file=sys.stderr, flush=True,
     )
 
     return {
+        "corpus_label": corpus_label,
         "domain_dir": str(domain_dir),
         "docs_loaded": docs_total,
         "files_skipped_or_unsupported": skipped,

@@ -537,6 +537,203 @@ def _run_chat_mode(values: dict[str, str]) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Multi-domain batch helpers
+# ---------------------------------------------------------------------------
+
+def _dsn_with_db(base_dsn: str, db_name: str) -> str:
+    """Replace the database name in a DSN."""
+    import re as _re
+    return _re.sub(r"/[^/]*$", f"/{db_name}", base_dsn)
+
+
+def _folder_to_db_name(folder_name: str) -> str:
+    """Derive a safe Postgres DB name from a folder name."""
+    import re as _re
+    safe = _re.sub(r"[^a-z0-9]", "_", folder_name.lower()).strip("_")
+    return f"{safe}_ragtestdb"
+
+
+def _ensure_db(dsn: str, db_name: str) -> bool:
+    """Create DB + enable pgvector if the DB doesn't already exist."""
+    try:
+        import psycopg as _pg
+    except ImportError:
+        print("  [db] ERROR: psycopg not installed.")
+        return False
+
+    maintenance_dsn = _dsn_with_db(dsn, "postgres")
+    try:
+        conn = _pg.connect(maintenance_dsn, autocommit=True)
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
+            if cur.fetchone():
+                print(f"  [db] Exists: {db_name}")
+            else:
+                cur.execute(f'CREATE DATABASE "{db_name}"')
+                print(f"  [db] Created: {db_name}")
+        conn.close()
+    except Exception as e:
+        print(f"  [db] ERROR connecting to maintenance DB: {e}")
+        return False
+
+    try:
+        conn = _pg.connect(dsn)
+        with conn.cursor() as cur:
+            cur.execute("CREATE EXTENSION IF NOT EXISTS vector;")
+        conn.commit()
+        conn.close()
+        print(f"  [db] pgvector ready.")
+    except Exception as e:
+        print(f"  [db] WARNING: could not enable pgvector: {e}")
+
+    return True
+
+
+def _run_multi_domain(values: dict[str, str], rag_root_val: Path, cli_path: Path) -> None:
+    """Run ingest (or full pipeline) across multiple domain/DB pairs."""
+    _W2 = 54
+
+    # ── Choose mode ───────────────────────────────────────────────────────
+    print()
+    print("  Mode to run for each domain:")
+    print("    I  Ingest only")
+    print("    P  Pipeline  (ingest + generate)")
+    print("    F  Full      (ingest + generate + analytics)")
+    print("    Enter = cancel")
+    try:
+        mode = input("  > ").strip().upper()
+    except (EOFError, KeyboardInterrupt):
+        return
+    if mode not in {"I", "P", "F"}:
+        print("  Cancelled.")
+        return
+
+    # ── Collect domain entries ────────────────────────────────────────────
+    base_dsn = values.get("DB_DSN", "")
+    print()
+    print("  Enter domain folders one at a time.")
+    print("  For each, confirm or override the suggested DB name.")
+    print("  Empty folder path = done.\n")
+
+    entries: list[tuple[Path, str]] = []  # (domain_dir, dsn)
+    idx = 1
+    while True:
+        try:
+            raw = input(f"  Folder {idx}: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            break
+        if not raw:
+            break
+        folder = Path(raw)
+        if not folder.exists():
+            print(f"  [!] Not found — skipping: {raw}")
+            continue
+
+        suggested_db = _folder_to_db_name(folder.name)
+        suggested_dsn = _dsn_with_db(base_dsn, suggested_db)
+        print(f"      DB suggestion: {suggested_db}")
+        try:
+            override = input(f"      DB name (Enter to accept): ").strip()
+        except (EOFError, KeyboardInterrupt):
+            break
+        db_name = override if override else suggested_db
+        dsn = _dsn_with_db(base_dsn, db_name)
+        entries.append((folder, dsn))
+        print(f"      -> {folder.name}  |  {dsn}\n")
+        idx += 1
+
+    if not entries:
+        print("  No domains entered.")
+        return
+
+    # ── Confirm ───────────────────────────────────────────────────────────
+    print(f"\n  {len(entries)} domain(s) queued  |  mode: {mode}")
+    for i, (d, dsn) in enumerate(entries, 1):
+        print(f"    {i}.  {d.name}  ->  {dsn.split('/')[-1]}")
+    try:
+        confirm = input("\n  Proceed? (Y/N): ").strip().lower()
+    except (EOFError, KeyboardInterrupt):
+        return
+    if confirm not in {"y", "yes"}:
+        print("  Cancelled.")
+        return
+
+    # ── Run each domain ───────────────────────────────────────────────────
+    run_id = _utc_now()
+    log_dir_base = rag_root_val / "runs" / f"logs_{run_id}_multi"
+    log_dir_base.mkdir(parents=True, exist_ok=True)
+
+    results: list[tuple[str, int, str]] = []  # (folder_name, returncode, duration)
+
+    _hdr(f"MULTI-DOMAIN  —  {len(entries)} domain(s)  |  mode: {mode}")
+    print(f"  run_id  : {run_id}")
+    print(f"  log dir : {log_dir_base}")
+
+    for i, (domain_dir, dsn) in enumerate(entries, 1):
+        _sub(f"Domain {i}/{len(entries)}  —  {domain_dir.name}")
+        print(f"  path : {domain_dir}")
+        print(f"  db   : {dsn.split('/')[-1]}")
+        print()
+
+        # Ensure DB + pgvector exist
+        db_name = dsn.split("/")[-1]
+        if not _ensure_db(dsn, db_name):
+            print(f"  [!] Skipping — could not prepare DB.")
+            results.append((domain_dir.name, -1, "skipped"))
+            continue
+
+        # Build env for this domain
+        env = dict(os.environ)
+        for k, v in values.items():
+            if v:
+                env[k] = v
+        env["DOMAIN_DIR"] = str(domain_dir)
+        env["DB_DSN"] = dsn
+        env["RUN_ID"] = f"{run_id}_{i:02}"
+        env["LOG_DIR"] = str(log_dir_base)
+
+        # Build command
+        if mode in {"P", "F"}:
+            cmd = [sys.executable, str(cli_path), "pipeline", "--force-ingest", "--clear-first"]
+        else:  # I
+            cmd = [sys.executable, str(cli_path), "pipeline", "--force-ingest", "--clear-first", "--ingest-only"]
+
+        for flag, env_key in [
+            ("--no-checkpoint-chunks", "CHECKPOINT_CHUNKS"),
+            ("--no-checkpoint-items", "CHECKPOINT_ITEMS"),
+            ("--no-checkpoint-review", "CHECKPOINT_REVIEW"),
+        ]:
+            if values.get(env_key, "true").lower() in {"0", "false", "no", "n"}:
+                if flag == "--no-checkpoint-chunks" and mode in {"P", "F", "I"}:
+                    cmd.append(flag)
+                elif flag in ("--no-checkpoint-items", "--no-checkpoint-review") and mode in {"P", "F"}:
+                    cmd.append(flag)
+
+        log_file = log_dir_base / f"{i:02}_{domain_dir.name}.txt"
+        t0 = time.perf_counter()
+        returncode = _run_tee(cmd, log_file, env)
+        elapsed = time.perf_counter() - t0
+        m_e, s_e = int(elapsed // 60), int(elapsed % 60)
+        dur = f"{m_e}m {s_e}s"
+
+        status = "OK" if returncode == 0 else f"FAILED (exit {returncode})"
+        print(f"\n  [{i}/{len(entries)}] {domain_dir.name}: {status} — {dur}")
+        results.append((domain_dir.name, returncode, dur))
+
+        if mode == "F" and returncode == 0:
+            _sub("ANALYTICS")
+            print()
+            _run_analytics(log_dir_base, rag_root_val)
+
+    # ── Summary ───────────────────────────────────────────────────────────
+    _hdr("MULTI-DOMAIN COMPLETE")
+    for i, (name, rc, dur) in enumerate(results, 1):
+        status = "OK" if rc == 0 else ("skipped" if rc == -1 else f"exit {rc}")
+        print(f"  {i}.  {name:<30}  {status:<10}  {dur}")
+    print(f"\n  log dir: {log_dir_base}")
+
+
+# ---------------------------------------------------------------------------
 # Analytics helpers
 # ---------------------------------------------------------------------------
 
@@ -576,14 +773,33 @@ def _run_analytics_latest(rag_root: Path) -> None:
     _run_analytics(latest, rag_root)
 
 
+_W = 54  # banner width
+
+def _hdr(label: str) -> None:
+    """Print a top-level ===== section banner."""
+    inner = f"  {label}  "
+    pad = max(0, _W - len(inner))
+    left = pad // 2
+    right = pad - left
+    print(f"\n{'=' * _W}")
+    print(f"{'=' * left}{inner}{'=' * right}")
+    print(f"{'=' * _W}")
+
+
+def _sub(label: str) -> None:
+    """Print a -------- sub-section label."""
+    dashes = max(4, _W - len(label) - 3)
+    print(f"\n-------- {label} " + "-" * dashes)
+
+
 def main() -> None:
     # Determine rag_root: the directory containing runner.py
     rag_root = Path(__file__).resolve().parent
     config_path = _find_config_env(rag_root)
 
-    print(f"\nRAG TestGen Runner")
-    print(f"  rag_root: {rag_root}")
-    print(f"  config:   {config_path}")
+    _hdr("RAG TestGen")
+    print(f"  rag_root : {rag_root}")
+    print(f"  config   : {config_path}")
 
     # Load persisted config, fill defaults
     values: dict[str, str] = {**DEFAULTS}
@@ -637,6 +853,7 @@ def main() -> None:
         print()
         print("  ── Tools " + "─" * 42)
         print("  Q  Query        interactive SQL chat, explore corpus db")
+        print("  M  Multi-domain run pipeline across multiple domain/DB pairs")
         print()
         print("  Enter = back to settings   X = quit")
         print(_SEP)
@@ -654,12 +871,21 @@ def main() -> None:
             print("\nExiting.")
             break
 
-        if run_choice not in {"B", "F", "P", "I", "G", "A", "Q"}:
+        if run_choice not in {"B", "F", "P", "I", "G", "A", "Q", "M"}:
             print("  Invalid choice. Try again.")
             continue
 
         if run_choice == "Q":
             _run_chat_mode(values)
+            continue
+
+        if run_choice == "M":
+            rag_root_val_m = Path(values.get("RAG_ROOT", str(rag_root)))
+            cli_path_m = rag_root_val_m / "cli.py"
+            if not cli_path_m.exists():
+                print(f"\nERROR: cli.py not found at {cli_path_m}")
+                continue
+            _run_multi_domain(values, rag_root_val_m, cli_path_m)
             continue
 
         # Validate required paths
@@ -714,9 +940,17 @@ def main() -> None:
 
         _write_run_info(log_dir / "run_info.txt", values, run_id, {"RUN_START": _utc_iso()})
 
-        print(f"\nRUN_ID: {run_id}")
-        print(f"Log dir: {log_dir}")
-        print(f"Started: {_utc_iso()}\n")
+        _run_labels = {
+            "F": "FULL  —  ingest + generate + analytics",
+            "P": "PIPELINE  —  ingest + generate",
+            "B": "BATCH  —  generate + analytics",
+            "I": "INGEST ONLY",
+            "G": "GENERATE ONLY",
+        }
+        _hdr(_run_labels.get(run_choice, run_choice))
+        print(f"  RUN_ID  : {run_id}")
+        print(f"  log dir : {log_dir}")
+        print(f"  started : {_utc_iso()}")
 
         t0 = time.perf_counter()
 
@@ -727,6 +961,12 @@ def main() -> None:
             values.get(k, "true").lower() not in {"0", "false", "no", "n"}
             for k in ["CHECKPOINT_CHUNKS", "CHECKPOINT_ITEMS", "CHECKPOINT_REVIEW"]
         ) and run_choice in {"F", "P", "B", "G", "I"}
+
+        if run_choice in {"F", "P", "I"}:
+            _sub("INGEST")
+        elif run_choice in {"B", "G"}:
+            _sub("GENERATE")
+        print()
 
         if checkpoint_enabled:
             # Direct run — stdin passes through for interactive checkpoints
@@ -747,9 +987,11 @@ def main() -> None:
         s = int(elapsed % 60)
         duration_str = f"{h}h {m}m {s}s"
 
-        print(f"\nFinished: {_utc_iso()}")
-        print(f"Duration: {duration_str}")
-        print(f"Exit code: {returncode}")
+        status = "DONE" if returncode == 0 else f"DONE  (exit {returncode})"
+        _hdr(status)
+        print(f"  finished : {_utc_iso()}")
+        print(f"  duration : {duration_str}")
+        print(f"  exit     : {returncode}")
 
         _write_run_info(
             log_dir / "run_info.txt", values, run_id,
@@ -766,6 +1008,8 @@ def main() -> None:
             _capture_lmstudio_logs(lmstudio_log, log_dir / "lmstudio.log")
 
         if run_choice in {"F", "B"} and returncode == 0:
+            _sub("ANALYTICS")
+            print()
             _run_analytics(log_dir, rag_root_val)
 
         try:

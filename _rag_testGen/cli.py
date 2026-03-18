@@ -123,14 +123,20 @@ def main(argv: list[str] | None = None) -> int:
 
     # ---- ingest ----
     if args.cmd == "ingest":
-        from pathlib import Path as P
+        # corpus_label is derived from DOMAIN_DIR basename; no CLI override needed.
+        domain_dir_path = Path(cfg.domain_dir)
+        corpus_label = domain_dir_path.resolve().name
         ingest_cfg = IngestConfig(
-            domain_dir=cfg.domain_dir,
+            domain_dir=domain_dir_path,
             db_dsn=cfg.db_dsn,
             embed_lm_url=cfg.lm_url,
             embed_model=cfg.embed_model,
-            context_lm_url=cfg.lm_url,
+            lm_url=cfg.lm_url,
             context_model=cfg.context_model,
+            api_provider=cfg.api_provider,
+            api_model=cfg.api_model,
+            ingest_provider=cfg.ingest_provider,
+            corpus_label=corpus_label,
             embedding_dim=cfg.embedding_dim,
             batch_size=cfg.batch_size,
             clear_first=bool(args.clear_first),
@@ -143,6 +149,8 @@ def main(argv: list[str] | None = None) -> int:
 
     # ---- generate (RAG) ----
     if args.cmd == "generate":
+        # corpus_label for generate is derived from DOMAIN_DIR so it matches the ingest label.
+        corpus_label = Path(cfg.domain_dir).resolve().name
         gen_cfg = GenerateConfig(
             db_dsn=cfg.db_dsn,
             lm_url=cfg.lm_url,
@@ -153,6 +161,7 @@ def main(argv: list[str] | None = None) -> int:
             run_id=run_id,
             prompts_dir=cfg.prompts_dir,
             out_dir=cfg.out_dir,
+            corpus_label=corpus_label,
             top_k=cfg.top_k,
             sleep_seconds=cfg.sleep_seconds,
             checkpoint_items=not bool(getattr(args, "no_checkpoint_items", False)),
@@ -187,6 +196,8 @@ def main(argv: list[str] | None = None) -> int:
 
     # ---- pipeline ----
     if args.cmd == "pipeline":
+        # corpus_label is derived from DOMAIN_DIR basename; run_pipeline will confirm it.
+        corpus_label = Path(cfg.domain_dir).resolve().name
         pipe_cfg = PipelineConfig(
             db_dsn=cfg.db_dsn,
             domain_dir=cfg.domain_dir,
@@ -198,6 +209,7 @@ def main(argv: list[str] | None = None) -> int:
             ingest_provider=cfg.ingest_provider,
             generate_provider=cfg.generate_provider,
             review_provider=cfg.review_provider,
+            corpus_label=corpus_label,
             embedding_dim=cfg.embedding_dim,
             batch_size=cfg.batch_size,
             clear_first=bool(args.clear_first),
