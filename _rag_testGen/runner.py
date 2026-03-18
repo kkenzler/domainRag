@@ -313,6 +313,228 @@ def _write_run_info(path: Path, values: dict[str, str], run_id: str, extra: dict
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+# ---------------------------------------------------------------------------
+# Q mode — SQL agent chat (corpus exploration)
+# ---------------------------------------------------------------------------
+
+_SCHEMA_Q = """
+Tables in this PostgreSQL database:
+
+rag_chunks (
+    id          BIGSERIAL PRIMARY KEY,
+    doc_path    TEXT NOT NULL,        -- file path/name of source document
+    doc_sha256  TEXT NOT NULL,        -- SHA-256 hash of source file
+    chunk_index INT NOT NULL,         -- 0-based order within document
+    chunk_text  TEXT NOT NULL,        -- extracted knowledge chunk text
+    meta        JSONB NOT NULL,       -- arbitrary metadata (page numbers, etc.)
+    created_at  TIMESTAMPTZ,
+    updated_at  TIMESTAMPTZ
+)
+
+rag_meta (
+    k           TEXT PRIMARY KEY,     -- metadata key (e.g. embedding_dim, corpus_label, ingest_date)
+    v           TEXT NOT NULL,        -- metadata value
+    updated_at  TIMESTAMPTZ
+)
+
+Useful query patterns:
+- Count all chunks:            SELECT COUNT(*) AS total FROM rag_chunks
+- List source documents:       SELECT DISTINCT doc_path FROM rag_chunks ORDER BY doc_path
+- Chunks per document:         SELECT doc_path, COUNT(*) AS chunk_count FROM rag_chunks GROUP BY doc_path ORDER BY chunk_count DESC
+- Search chunk text:           SELECT id, doc_path, chunk_index, chunk_text FROM rag_chunks WHERE chunk_text ILIKE '%keyword%' LIMIT 20
+- Show all corpus metadata:    SELECT k, v FROM rag_meta ORDER BY k
+- Longest chunks:              SELECT id, doc_path, chunk_index, LENGTH(chunk_text) AS chars FROM rag_chunks ORDER BY chars DESC LIMIT 20
+- Chunks from one document:    SELECT chunk_index, chunk_text FROM rag_chunks WHERE doc_path ILIKE '%filename%' ORDER BY chunk_index
+""".strip()
+
+_SQL_GEN_SYSTEM_Q = f"""You are a PostgreSQL query generator for a RAG (Retrieval-Augmented Generation) corpus database.
+
+DATABASE SCHEMA:
+{_SCHEMA_Q}
+
+Your job: given a user question about the corpus, generate a SQL SELECT query.
+
+ALWAYS respond with exactly one JSON object — no markdown, no explanation, no extra text.
+
+If answerable with SQL:
+{{"sql": "SELECT ..."}}
+
+If the question is off-topic or unanswerable:
+{{"sql": null, "reply": "brief explanation"}}
+
+SQL RULES:
+- Only SELECT — never INSERT, UPDATE, DELETE, DROP, or DDL
+- Always use LIMIT 100 unless the user asks for more, or the query is a COUNT/aggregate
+- For text searches use ILIKE with % on both sides: chunk_text ILIKE '%keyword%'
+- For doc_path searches: doc_path ILIKE '%filename%'
+- Never use SELECT * — always name specific columns
+- Prefer informative column aliases: LENGTH(chunk_text) AS chars
+""".strip()
+
+_FORMATTER_SYSTEM_Q = """You are a helpful assistant summarizing database query results about a RAG corpus.
+
+You will receive a user question and the SQL result.
+
+RULES:
+- Be concise and direct.
+- Never invent information not present in the data.
+- If the result is a single number or small list, state it plainly.
+- If there are many rows, give a brief summary rather than listing all of them.
+- If the data is empty, say so.
+""".strip()
+
+
+def _call_lm(lm_url: str, model: str, system: str, user: str, timeout: int = 60) -> str:
+    """Single LM Studio chat completion call. Returns content string."""
+    import requests as _req
+    url = lm_url.rstrip("/") + "/v1/chat/completions"
+    payload = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user",   "content": user},
+        ],
+        "temperature": 0.1,
+        "stream": False,
+    }
+    resp = _req.post(url, json=payload, timeout=timeout)
+    resp.raise_for_status()
+    return resp.json()["choices"][0]["message"]["content"].strip()
+
+
+def _parse_sql_response(raw: str) -> dict:
+    """Parse SQL gen JSON response. Returns dict with 'sql' key (may be None)."""
+    import json as _json, re as _re
+    cleaned = _re.sub(r"```(?:json)?|```", "", raw).strip()
+    try:
+        return _json.loads(cleaned)
+    except Exception:
+        m = _re.search(r'\{.*\}', cleaned, _re.DOTALL)
+        if m:
+            try:
+                return _json.loads(m.group())
+            except Exception:
+                pass
+    return {"sql": None, "reply": "Could not parse model response."}
+
+
+def _execute_sql_q(conn, sql: str) -> tuple[list[dict], str]:
+    """Execute a SELECT query against the corpus DB. Returns (rows, error_msg)."""
+    first_word = sql.strip().split()[0].upper() if sql.strip() else ""
+    if first_word != "SELECT":
+        return [], f"Rejected: only SELECT is allowed (got {first_word!r})"
+    try:
+        with conn.cursor() as cur:
+            cur.execute(sql)
+            cols = [d.name for d in cur.description] if cur.description else []
+            rows = [dict(zip(cols, row)) for row in (cur.fetchall() or [])]
+        return rows, ""
+    except Exception as e:
+        return [], str(e)
+
+
+def _format_rows_q(rows: list[dict], max_rows: int = 50) -> str:
+    """Format query result rows as a plain-text table."""
+    if not rows:
+        return "(no rows)"
+    cols = list(rows[0].keys())
+    lines = ["  ".join(str(c) for c in cols)]
+    lines.append("-" * min(100, sum(len(str(c)) + 2 for c in cols)))
+    for r in rows[:max_rows]:
+        lines.append("  ".join(str(r.get(c, "")) for c in cols))
+    if len(rows) > max_rows:
+        lines.append(f"... ({len(rows) - max_rows} more rows not shown)")
+    return "\n".join(lines)
+
+
+def _run_chat_mode(values: dict[str, str]) -> None:
+    """Interactive two-call SQL agent chat loop for corpus exploration."""
+    import psycopg as _pg
+
+    dsn   = values.get("DB_DSN", "")
+    lm_url = values.get("LM_URL", "http://localhost:1234")
+    model  = values.get("GENERATOR_MODEL", "") or values.get("CONTEXT_MODEL", "")
+
+    if not dsn:
+        print("\nERROR: DB_DSN not set. Update settings (Y) and configure it.")
+        return
+    if not model:
+        print("\nERROR: GENERATOR_MODEL not set. Update settings (Y) and configure it.")
+        return
+
+    print(f"\nConnecting to {dsn} ...")
+    try:
+        conn = _pg.connect(dsn)
+    except Exception as e:
+        print(f"ERROR: Could not connect: {e}")
+        return
+
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM rag_chunks;")
+            n_chunks = int((cur.fetchone() or [0])[0])
+        print(f"Connected. {n_chunks} chunk(s) in corpus.")
+    except Exception as e:
+        print(f"WARNING: Could not query rag_chunks ({e}). DB may be empty.")
+        n_chunks = 0
+
+    print(f"\nCorpus Chat  |  model: {model}  |  type 'exit' to return\n")
+
+    while True:
+        try:
+            question = input("Q> ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            break
+        if not question:
+            continue
+        if question.lower() in {"exit", "quit", "q", "back"}:
+            break
+
+        # ── Call 1: generate SQL ──────────────────────────────────────────
+        print("  [generating SQL...]", end="", flush=True)
+        try:
+            raw1 = _call_lm(lm_url, model, _SQL_GEN_SYSTEM_Q, question, timeout=60)
+            parsed = _parse_sql_response(raw1)
+        except Exception as e:
+            print(f"\r  [error calling LM Studio: {e}]\n")
+            continue
+
+        print("\r" + " " * 25 + "\r", end="", flush=True)
+
+        sql = parsed.get("sql")
+        if not sql:
+            reply = parsed.get("reply", "I can't answer that with this database.")
+            print(f"  {reply}\n")
+            continue
+
+        print(f"  SQL: {sql}")
+
+        # ── Execute ───────────────────────────────────────────────────────
+        rows, err = _execute_sql_q(conn, sql)
+        if err:
+            print(f"  SQL error: {err}\n")
+            continue
+        if not rows:
+            print("  No results.\n")
+            continue
+
+        rows_text = _format_rows_q(rows)
+
+        # ── Call 2: format result ─────────────────────────────────────────
+        user_prompt = (
+            f"Question: {question}\n\n"
+            f"SQL RESULT ({len(rows)} row(s)):\n{rows_text}"
+        )
+        try:
+            reply = _call_lm(lm_url, model, _FORMATTER_SYSTEM_Q, user_prompt, timeout=90)
+            print(f"\n{reply}\n")
+        except Exception:
+            print(f"\n{rows_text}\n")
+
+    conn.close()
+
+
 def main() -> None:
     # Determine rag_root: the directory containing runner.py
     rag_root = Path(__file__).resolve().parent
@@ -359,15 +581,20 @@ def main() -> None:
         print("  I = Ingest only   (extract knowledge chunks, write XLSX)")
         print("  G = Generate only (use existing DB chunks, RAG mode)")
         print("  B = Baseline      (no-RAG, load docs directly)")
+        print("  Q = Query         (interactive SQL chat, explore corpus DB)")
 
         try:
-            run_choice = input("Choice (F / I / G / B): ").strip().upper()
+            run_choice = input("Choice (F / I / G / B / Q): ").strip().upper()
         except (EOFError, KeyboardInterrupt):
             print("\nExiting.")
             break
 
-        if run_choice not in {"F", "I", "G", "B"}:
+        if run_choice not in {"F", "I", "G", "B", "Q"}:
             print("Invalid choice. Try again.")
+            continue
+
+        if run_choice == "Q":
+            _run_chat_mode(values)
             continue
 
         # Validate required paths
