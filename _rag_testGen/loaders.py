@@ -214,6 +214,62 @@ def _is_spoken_math_transcript(text: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# MP4 — auto-transcribe via faster-whisper, sidecar .txt cache
+# ---------------------------------------------------------------------------
+
+def load_mp4(path: Path) -> tuple[str, int]:
+    """Transcribes an MP4 using faster-whisper (local, no API).
+
+    Checks for a sidecar .txt (same stem, same directory) first.
+    If found, loads it directly — avoids re-transcribing on subsequent ingest runs.
+    If not found, transcribes and writes the sidecar, then returns the text.
+    """
+    sidecar = path.with_suffix(".txt")
+
+    if sidecar.exists():
+        print(f"  [mp4] Using existing transcript: {sidecar.name}", flush=True)
+        text = sidecar.read_text(encoding="utf-8", errors="replace")
+        return text, 1
+
+    print(f"  [mp4] No transcript found — transcribing: {path.name}", flush=True)
+
+    try:
+        from faster_whisper import WhisperModel
+    except ImportError:
+        raise RuntimeError(
+            "MP4 transcription requires faster-whisper. "
+            "Install: pip install faster-whisper"
+        )
+
+    try:
+        model = WhisperModel("small", device="cuda", compute_type="float16")
+        print("  [mp4] Using GPU.", flush=True)
+    except Exception:
+        model = WhisperModel("small", device="cpu", compute_type="int8")
+        print("  [mp4] Using CPU (CUDA unavailable).", flush=True)
+
+    segments, info = model.transcribe(str(path), language="en")
+    duration = info.duration
+
+    lines = []
+    for segment in segments:
+        h = int(segment.start // 3600)
+        m = int((segment.start % 3600) // 60)
+        s = int(segment.start % 60)
+        lines.append(f"[{h:02}:{m:02}:{s:02}] {segment.text.strip()}")
+        pct = min(segment.end / duration, 1.0) if duration > 0 else 0
+        filled = int(40 * pct)
+        bar = "█" * filled + "░" * (40 - filled)
+        print(f"\r  [mp4] [{bar}] {pct*100:.1f}%", end="", flush=True)
+
+    print(f"\r  [mp4] Done. Writing transcript: {sidecar.name}" + " " * 20, flush=True)
+    text = "\n".join(lines)
+    sidecar.write_text(text, encoding="utf-8")
+
+    return text, 1
+
+
+# ---------------------------------------------------------------------------
 # Public interface
 # ---------------------------------------------------------------------------
 
@@ -231,6 +287,8 @@ def load_document(path: Path) -> Optional[LoadedDoc]:
         raw_text, page_count = load_pdf(path)
     elif ext == ".pptx":
         raw_text, page_count = load_pptx(path)
+    elif ext == ".mp4":
+        raw_text, page_count = load_mp4(path)
     else:
         return None
 
