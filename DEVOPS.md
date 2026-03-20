@@ -360,6 +360,10 @@ Generation stays local (free). Haiku reviewer will provide meaningful, independe
 
 ## Still To Do — Priority Order
 
+- `to-do`: Run a live Q-mode check against a loaded corpus after the current control-plane cleanup cycle.
+- `barrier`: Client corpora such as `agentFundamentals` must stay fully local for ingest, generation, and review; cloud providers are forbidden there.
+- `prompt-assist`: Keep competency tagging and merged-study tooling explicit because they are the next research-shaping changes after the batch comparison work settles.
+
 ### IN PROGRESS: Comparative Batch Study (Session 15)
 
 See Session 15 Plan above. Batch A done. Batches B/C/D running overnight.
