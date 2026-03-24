@@ -5,6 +5,8 @@
 
 # domainRag: generated run outputs (xlsx, manifests, logs)
 _rag_testGen/runs/
+_rag_testGen/config.env
+_archive/
 
 # analytics/ output — already-committed content stays; new runs not auto-staged
 analytics/

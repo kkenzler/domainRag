@@ -13,8 +13,9 @@ Mac/Linux: ./_run_testGen.sh  (chmod +x required on first use)
            OR: python3 _rag_testGen/runner.py
 
 First run: when prompted "Update settings?" enter Y and set all paths and
-model names. Settings are saved to _rag_testGen/config.env and will not be
-asked again unless you choose to update them.
+model names. Settings are saved to `C:\Users\kadek\secrets\domainRag\config.env`
+by default. Set `DOMAINRAG_CONFIG_ENV` if you want a different local path.
+The repo includes `_rag_testGen/config.env.example` as a safe template only.
 
 
 PREREQUISITES
@@ -40,7 +41,7 @@ PREREQUISITES
 
 4. API key (optional but recommended for PDF-heavy corpora on low-VRAM hardware).
    Entering an API key at runtime routes PDF ingest to Anthropic or another
-   cloud provider. The key is never saved to config.env.
+   cloud provider. The key is never saved to the persisted config file.
 
 5. Python dependencies:
 
@@ -50,21 +51,21 @@ PREREQUISITES
 USAGE
 -----
 On startup, runner.py asks:
-  - Update settings? (Y/N) -- review and edit config.env values
+  - Update settings? (Y/N) -- review and edit the persisted config values
   - Run mode:
       F = Full pipeline    ingest domain folder + generate items (RAG mode)
       I = Ingest only      extract knowledge chunks, embed, write XLSX preview
       G = Generate only    use existing DB chunks to generate + review items
       B = Baseline         no-RAG mode -- load docs directly, no pgvector
 
-Human-in-the-loop checkpoints (each can be disabled in config.env):
+Human-in-the-loop checkpoints (each can be disabled in the persisted config):
   After ingest:      review extracted knowledge chunks, edit or skip any
   After generation:  review generated items, edit or skip before critic pass
   After review:      see flagged items, override or correct before final output
 
 When checkpoints are enabled, the terminal must remain interactive.
 
-Source documents go in the folder set as DOMAIN_DIR in config.env. Supported
+Source documents go in the folder set as DOMAIN_DIR in the persisted config. Supported
 formats: PDF, PPTX, DOCX, TXT.
 
 Hardware note: PDF vision ingest requires ~8GB VRAM for full GPU speed. On
@@ -76,7 +77,8 @@ PPTX/DOCX/TXT ingest runs fast on any hardware via the local text model.
 
 OUTPUT
 ------
-Each run writes to _rag_testGen/runs/logs_<RUNID>/:
+Each run writes to the secrets-backed run root under
+`C:\Users\kadek\secrets\domainRag\runs\logs_<RUNID>\` by default:
 
   run_<RUNID>.xlsx           Multi-sheet workbook:
                                Run Metadata, DB Snapshot, Chunk Preview,
@@ -99,8 +101,9 @@ pgvector connection error           Confirm Docker container is running:
 
 LM Studio timeout on PDF ingest     Vision model is running on CPU. Route
                                     PDFs to Anthropic API instead by setting
-                                    LLM_PROVIDER=anthropic in config.env and
-                                    entering your API key at the runtime prompt.
+                                    API_PROVIDER=anthropic in the persisted
+                                    config and entering your API key at the
+                                    runtime prompt.
 
 Embeddings fail                     Confirm LM Studio is running and
                                     nomic-embed-text-v1.5 is loaded. Embeddings
