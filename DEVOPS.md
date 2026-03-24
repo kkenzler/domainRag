@@ -36,7 +36,7 @@ _rag_testGen/
 │   ├── reviewer_user.txt       # Contains {{GEN_ITEM}} and {{CONTEXT}} placeholders
 │   ├── context_system.txt      # Knowledge extraction instructions for context model
 │   └── context_user.txt        # Contains {{DOCUMENT}} placeholder (text mode only)
-├── runs/
+├── runs/                  # runtime output root now defaults to C:\Users\kadek\secrets\domainRag\runs\
 │   └── logs_RUNID/
 │       ├── console_pipeline.txt / console_generate.txt / console_baseline.txt
 │       ├── run_info.txt
@@ -45,7 +45,7 @@ _rag_testGen/
 │       ├── lmstudio.log
 │       ├── llm_http.jsonl
 │       └── docker_CONTAINERNAME.log
-└── config.env              # Auto-written plain KEY=VALUE (no shell syntax)
+└── config.env.example      # Safe template; real config lives under C:\Users\kadek\secrets\domainRag\
 
 _run_testGen.bat            # Windows thin shim — calls interactive_run.py
 _run_testGen.sh             # Mac/Linux thin shim — calls interactive_run.py (chmod +x required)
@@ -61,7 +61,7 @@ simply call `python interactive_run.py` or `python3 interactive_run.py`. All orc
 
 ### `interactive_run.py`
 
-- Loads and saves `config.env`
+- Loads and saves the persisted config file (default: `C:\Users\kadek\secrets\domainRag\config.env`)
 - Prompts user: update settings? (Y/N), shows current values
 - Prompts user: run mode F / I / G / B
   - F = Full pipeline (ingest + generate, RAG mode)
@@ -69,7 +69,7 @@ simply call `python interactive_run.py` or `python3 interactive_run.py`. All orc
   - G = Generate only (use existing DB chunks, RAG mode)
   - B = Baseline (no-RAG, load docs directly)
 - Generates RUN_ID (UTC timestamp)
-- Creates `runs/logs_RUNID/` directory
+- Creates a secrets-backed `runs/logs_RUNID/` directory
 - Sets environment variables for subprocess
 - Calls `cli.py` via subprocess
 - When checkpoints are disabled: tees stdout to console + log file
@@ -140,7 +140,7 @@ _run_testGen.bat / _run_testGen.sh
   - anthropic: `document` block with raw PDF bytes (native PDF support, no rendering)
 - `render_pdf_pages_b64(pdf_path, dpi)` — renders PDF pages to base64 PNG list (MuPDF warnings suppressed)
 - `pdf_to_b64(pdf_path)` — raw PDF bytes as base64 (for Anthropic native PDF)
-- All calls log to `runs/logs_RUNID/llm_http.jsonl` (provider, model, mode, elapsed_ms, token counts)
+- All calls log to the secrets-backed `runs/logs_RUNID/llm_http.jsonl` (provider, model, mode, elapsed_ms, token counts)
 - `LLM_API_KEY` read from env only, never logged or written to config
 
 ### `embed_lmstudio.py`
@@ -176,27 +176,32 @@ _run_testGen.bat / _run_testGen.sh
 
 ## Configuration (`config.env`)
 
-Plain `KEY=VALUE` file, no shell syntax. Written by `interactive_run.py`. `LLM_API_KEY` is never
-written here — entered at runtime via masked prompt, stored only in process environment.
+Plain `KEY=VALUE` file, no shell syntax. Written by `interactive_run.py` to
+`C:\Users\kadek\secrets\domainRag\config.env` by default, or to the path in
+`DOMAINRAG_CONFIG_ENV` if set. `_rag_testGen/config.env.example` is the tracked
+template. `LLM_API_KEY` is never written here — entered at runtime via masked
+prompt, stored only in process environment.
 
 ```
-RAG_ROOT=C:\Users\kadek\Documents\GitHub\KinaxisCapstone\_rag_testGen
-DOMAIN_DIR=C:\Users\kadek\Documents\GitHub\KinaxisCapstone\example1
+RAG_ROOT=C:\path\to\domainRag\_rag_testGen
+DOMAIN_DIR=C:\path\to\your\corpus
 N_ITEMS=1
-DB_DSN=postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb
+DB_DSN=postgresql://username:password@localhost:5435/your_database
 DOCKER_CONTAINER=pgvector17
 LM_URL=http://localhost:1234
-LLM_PROVIDER=lmstudio
 EMBED_MODEL=text-embedding-nomic-embed-text-v1.5@q8_0
 CONTEXT_MODEL=qwen/qwen2.5-vl-7b-instruct
 GENERATOR_MODEL=qwen2.5-7b-instruct-uncensored
 REVIEW_MODEL=qwen2.5-7b-instruct-uncensored
+API_PROVIDER=
+API_MODEL=
+INGEST_PROVIDER=local
+GENERATE_PROVIDER=local
+REVIEW_PROVIDER=local
 LMSTUDIO_LOGPATH=C:\Users\kadek\AppData\Roaming\LM Studio\logs\main.log
 CHECKPOINT_CHUNKS=true
 CHECKPOINT_ITEMS=true
 CHECKPOINT_REVIEW=true
-VISION_TIMEOUT_SECONDS=600
-RENDER_DPI=96
 ```
 
 Mac equivalent paths use `/Users/username/...` and `~/Library/Logs/LM Studio/main.log`.
@@ -353,7 +358,7 @@ Generation stays local (free). Haiku reviewer will provide meaningful, independe
 - XLSX output: Run Metadata, DB Snapshot, Chunk Preview, Items, Reviewer Decisions,
   Traceability, Quality Metrics sheets
 - **58 chunks in DB** from prior ingest run (all 11 docs in example1, via Anthropic API) — confirmed 2026-03-16
-- `config.env` paths updated to `C:\Users\kadek\source\repos\domainRag\` — were pointing to old KinaxisCapstone path
+- persisted config now belongs under `C:\Users\kadek\secrets\domainRag\`; repo copy should remain example-only
 - Generator/reviewer output quality unvalidated end-to-end — first G mode run pending
 
 ---
@@ -450,12 +455,12 @@ single-model generation?
 
 ## Client Corpus — IP Protection (HARD RULE)
 
-NEVER read, list, glob, or inspect files inside `C:\Users\kadek\Desktop\agentFundamentals\`,
+NEVER read, list, glob, or inspect files inside the configured private corpus path,
 `_client_corpus/`, or `_private_corpus/`. Contents are client IP.
 
 - All pipeline stages MUST be LOCAL: `INGEST_PROVIDER=local`, `GENERATE_PROVIDER=local`, `REVIEW_PROVIDER=local`
 - No client data to cloud APIs under any circumstances
-- You may read `config.env` (holds path string) and run logs — not the corpus files themselves
+- You may read the persisted config file (holds path string) and run logs — not the corpus files themselves
 
 ---
 
@@ -467,7 +472,7 @@ NEVER read, list, glob, or inspect files inside `C:\Users\kadek\Desktop\agentFun
 - All DB access via `psycopg.connect(dsn)`, no ORM
 - Python files use dataclasses, psycopg3, openpyxl, requests — no heavy frameworks
 - No f-strings or type annotations with `|` syntax — must support Python 3.9 for compatibility
-- `LLM_API_KEY` must never appear in logs, XLSX output, or `config.env`
+- `LLM_API_KEY` must never appear in logs, XLSX output, or the persisted config file
 - When advising on code changes, always provide either:
   (a) full function replacement from the `def` line to the final return/end of function, or
   (b) full file replacement if changes span multiple functions or are extensive

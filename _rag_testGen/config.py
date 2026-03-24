@@ -50,6 +50,10 @@ def _redact_dsn(dsn):
     return re.sub(r":([^:@/]+)@", ":***@", dsn)
 
 
+def _default_out_dir(rag_root: Path) -> Path:
+    return Path.home() / "secrets" / "domainRag" / "runs"
+
+
 @dataclass(frozen=True)
 class ResolvedConfig:
     """Fully-resolved configuration loaded from environment variables."""
@@ -184,7 +188,7 @@ def load_config_from_env():
     n_items = _env_int("N_ITEMS") or 5
     run_id = _env("RUN_ID")
     prompts_dir = Path(_env("PROMPTS_DIR") or str(rag_root / "_prompts")).resolve()
-    out_dir = Path(_env("OUT_DIR") or str(rag_root / "runs")).resolve()
+    out_dir = Path(_env("OUT_DIR") or str(_default_out_dir(rag_root))).resolve()
 
     force_ingest = _env_bool("FORCE_INGEST")
     ingest_only = _env_bool("INGEST_ONLY")

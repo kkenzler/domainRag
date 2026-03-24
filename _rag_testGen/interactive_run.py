@@ -89,7 +89,7 @@ CONFIG_LABELS = {
 
 DEFAULTS = {
     "N_ITEMS":              "5",
-    "DB_DSN":               "postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb",
+    "DB_DSN":               "postgresql://username:password@localhost:5435/your_database",
     "LM_URL":               "http://localhost:1234",
     "DOCKER_CONTAINER":     "pgvector17",
     "API_PROVIDER":         "",
@@ -122,15 +122,55 @@ def _utc_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
-def _find_config_env(rag_root: Path) -> Path:
+def _legacy_config_env(rag_root: Path) -> Path:
     return rag_root / "config.env"
+
+
+def _default_config_env() -> Path:
+    return Path.home() / "secrets" / "domainRag" / "config.env"
+
+
+def _default_run_root() -> Path:
+    return Path.home() / "secrets" / "domainRag" / "runs"
+
+
+def _find_secrets_config_candidate(default_path: Path) -> Path:
+    if default_path.exists():
+        return default_path
+
+    parent = default_path.parent
+    if not parent.exists():
+        return default_path
+
+    matches = sorted(
+        [
+            candidate for candidate in parent.iterdir()
+            if candidate.is_file() and candidate.name.startswith("config.env")
+        ],
+        key=lambda candidate: candidate.stat().st_mtime,
+        reverse=True,
+    )
+    if len(matches) == 1:
+        return matches[0]
+    return default_path
+
+
+def _find_config_env(rag_root: Path) -> Path:
+    override = os.environ.get("DOMAINRAG_CONFIG_ENV", "").strip()
+    if override:
+        return Path(override).expanduser().resolve()
+    return _find_secrets_config_candidate(_default_config_env())
 
 
 def load_config_env(path: Path) -> dict[str, str]:
     """Loads KEY=VALUE pairs from config.env into a dict."""
     cfg: dict[str, str] = {}
     if not path.exists():
-        return cfg
+        legacy = _legacy_config_env(Path(__file__).resolve().parent)
+        if legacy.exists() and legacy != path:
+            path = legacy
+        else:
+            return cfg
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
         if not line or line.startswith("#"):
@@ -147,6 +187,7 @@ def save_config_env(path: Path, values: dict[str, str]) -> None:
     for k in CONFIG_KEYS:
         v = values.get(k, "")
         lines.append(f"{k}={v}")
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -660,7 +701,7 @@ def _run_multi_domain(values: dict[str, str], rag_root_val: Path, cli_path: Path
 
     # ── Run each domain ───────────────────────────────────────────────────
     run_id = _utc_now()
-    log_dir_base = rag_root_val / "runs" / f"logs_{run_id}_multi"
+    log_dir_base = _default_run_root() / f"logs_{run_id}_multi"
     log_dir_base.mkdir(parents=True, exist_ok=True)
 
     results: list[tuple[str, int, str]] = []  # (folder_name, returncode, duration)
@@ -763,10 +804,10 @@ def _run_analytics_latest(rag_root: Path) -> None:
         print(f"\n[analytics] analyticsVizs.py not found at {script}")
         print("[analytics] (analytics/ is local-only; copy scripts there to enable viz)")
         return
-    runs_dir = rag_root / "runs"
+    runs_dir = _default_run_root()
     candidates = sorted(runs_dir.glob("logs_*"), key=lambda p: p.name) if runs_dir.exists() else []
     if not candidates:
-        print("\n[analytics] No run directories found in runs/. Run F or P first.")
+        print(f"\n[analytics] No run directories found in {runs_dir}. Run F or P first.")
         return
     latest = candidates[-1]
     print(f"\n[analytics] Most recent run: {latest.name}")

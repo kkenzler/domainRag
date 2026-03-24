@@ -21,7 +21,14 @@ if "%LLM_API_KEY%"=="" (
 )
 
 set RAG_ROOT=%~dp0_rag_testGen
-set DB_DSN=postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb
+if "%DOMAINRAG_DB_DSN%"=="" (
+    echo.
+    echo   ERROR: set DOMAINRAG_DB_DSN before running this script.
+    pause
+    exit /b 1
+)
+
+set DB_DSN=%DOMAINRAG_DB_DSN%
 set LM_URL=http://localhost:1234
 set EMBED_MODEL=text-embedding-nomic-embed-text-v1.5@q8_0
 set CONTEXT_MODEL=qwen/qwen2.5-vl-7b
@@ -40,7 +47,7 @@ echo   STEP 1/2  --  Ingest example1  (Sonnet API)
 echo ======================================================
 echo.
 
-set DOMAIN_DIR=C:\Users\kadek\source\repos\domainRag\example1
+set DOMAIN_DIR=%~dp0example1
 set INGEST_PROVIDER=api
 set GENERATE_PROVIDER=local
 set REVIEW_PROVIDER=local
@@ -67,7 +74,14 @@ echo   STEP 2/2  --  Generate agentFundamentals  (local)
 echo ======================================================
 echo.
 
-set DOMAIN_DIR=C:\Users\kadek\Desktop\agentFundamentals
+if "%DOMAINRAG_LOCAL_CORPUS%"=="" (
+    echo.
+    echo   ERROR: set DOMAINRAG_LOCAL_CORPUS before running step 2.
+    pause
+    exit /b 1
+)
+
+set DOMAIN_DIR=%DOMAINRAG_LOCAL_CORPUS%
 set INGEST_PROVIDER=local
 set GENERATE_PROVIDER=local
 set REVIEW_PROVIDER=local
