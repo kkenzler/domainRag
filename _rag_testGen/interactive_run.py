@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""runner.py — Cross-platform launcher for RAG TestGen.
+"""interactive_run.py — Cross-platform launcher for RAG TestGen.
 
 Replaces the orchestration logic formerly in _run_testGen.bat.
 Called by thin platform shims (_run_testGen.bat / _run_testGen.sh).
@@ -24,6 +24,11 @@ import platform
 import subprocess
 import sys
 import time
+import json
+import re
+import shutil
+import threading
+import queue
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -98,6 +103,7 @@ DEFAULTS = {
     "GENERATE_PROVIDER":    "local",
     "REVIEW_PROVIDER":      "local",
     "INGEST_DELAY_SECONDS": "10",
+    "DIFFICULTY_TARGET":    "any",
     "CHECKPOINT_CHUNKS":    "true",
     "CHECKPOINT_ITEMS":     "true",
     "CHECKPOINT_REVIEW":    "true",
@@ -134,32 +140,11 @@ def _default_run_root() -> Path:
     return Path.home() / "secrets" / "domainRag" / "runs"
 
 
-def _find_secrets_config_candidate(default_path: Path) -> Path:
-    if default_path.exists():
-        return default_path
-
-    parent = default_path.parent
-    if not parent.exists():
-        return default_path
-
-    matches = sorted(
-        [
-            candidate for candidate in parent.iterdir()
-            if candidate.is_file() and candidate.name.startswith("config.env")
-        ],
-        key=lambda candidate: candidate.stat().st_mtime,
-        reverse=True,
-    )
-    if len(matches) == 1:
-        return matches[0]
-    return default_path
-
-
 def _find_config_env(rag_root: Path) -> Path:
     override = os.environ.get("DOMAINRAG_CONFIG_ENV", "").strip()
     if override:
         return Path(override).expanduser().resolve()
-    return _find_secrets_config_candidate(_default_config_env())
+    return _default_config_env()
 
 
 def load_config_env(path: Path) -> dict[str, str]:
@@ -287,10 +272,52 @@ def _run_tee(cmd: list[str], log_path: Path, env: dict[str, str]) -> int:
             encoding="utf-8",
             errors="replace",
         )
-        for line in proc.stdout:
+        q: queue.Queue[str | None] = queue.Queue()
+
+        def _reader() -> None:
+            try:
+                assert proc.stdout is not None
+                for line in proc.stdout:
+                    q.put(line)
+            finally:
+                q.put(None)
+
+        reader = threading.Thread(target=_reader, daemon=True)
+        reader.start()
+
+        start = time.perf_counter()
+        last_heartbeat = start
+        heartbeat_visible = False
+        done = False
+        while not done:
+            try:
+                line = q.get(timeout=1.0)
+            except queue.Empty:
+                now = time.perf_counter()
+                if now - last_heartbeat >= 5.0:
+                    elapsed = int(now - start)
+                    mins, secs = divmod(elapsed, 60)
+                    sys.stdout.write(f"\r  ... still running ({mins}m {secs}s elapsed)")
+                    sys.stdout.flush()
+                    last_heartbeat = now
+                    heartbeat_visible = True
+                continue
+
+            if line is None:
+                done = True
+                continue
+
+            if heartbeat_visible:
+                sys.stdout.write("\r" + " " * 48 + "\r")
+                sys.stdout.flush()
+                heartbeat_visible = False
             sys.stdout.write(line)
             sys.stdout.flush()
             log_f.write(line)
+
+        if heartbeat_visible:
+            sys.stdout.write("\r" + " " * 48 + "\r")
+            sys.stdout.flush()
         proc.wait()
     return proc.returncode
 
@@ -338,6 +365,7 @@ def _build_env(values: dict[str, str], log_dir: Path, run_id: str) -> dict[str, 
             env[k] = v
     env["RUN_ID"] = run_id
     env["LOG_DIR"] = str(log_dir)
+    env["OUT_DIR"] = str(log_dir)
     # Never inherit LLM_API_KEY from config — only from os.environ (set in configure())
     # It's already in env if the user entered it above
     return env
@@ -352,6 +380,818 @@ def _write_run_info(path: Path, values: dict[str, str], run_id: str, extra: dict
         for k, v in extra.items():
             lines.append(f"{k}={v}")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
+def _slugify(text: str, max_len: int = 40) -> str:
+    slug = re.sub(r"[^A-Za-z0-9]+", "_", (text or "").strip()).strip("_").lower()
+    slug = re.sub(r"_+", "_", slug)
+    return (slug[:max_len].strip("_") or "row")
+
+
+class _BatchExit(Exception):
+    pass
+
+
+class _BatchBack(Exception):
+    pass
+
+
+def _prompt_with_default(label: str, default: str = "", allow_nav: bool = False) -> str:
+    shown = f" [{default}]" if default else ""
+    try:
+        val = input(f"  {label}{shown}: ").strip()
+    except (EOFError, KeyboardInterrupt):
+        return default
+    if allow_nav:
+        low = val.lower()
+        if low == "x":
+            raise _BatchExit()
+        if low == "b":
+            raise _BatchBack()
+    return val if val else default
+
+
+def _prompt_choice(label: str, choices: list[str], default: str, allow_nav: bool = False) -> str:
+    while True:
+        val = _prompt_with_default(label, default, allow_nav=allow_nav).lower()
+        if val in choices:
+            return val
+        print(f"  Invalid choice. Expected one of: {', '.join(choices)}")
+
+
+def _prompt_bool(label: str, default: bool = False, allow_nav: bool = False) -> bool:
+    shown = "Y" if default else "N"
+    while True:
+        val = _prompt_with_default(f"{label} [y/N]" if not default else f"{label} [Y/n]", "", allow_nav=allow_nav).lower()
+        if not val:
+            return default
+        if val in {"y", "yes"}:
+            return True
+        if val in {"n", "no"}:
+            return False
+        print("  Enter Y or N.")
+
+
+def _prompt_int(label: str, default: int | None = None, minimum: int = 1, allow_nav: bool = False) -> int:
+    shown = str(default) if default is not None else ""
+    while True:
+        raw = _prompt_with_default(label, shown, allow_nav=allow_nav)
+        try:
+            val = int(raw)
+        except ValueError:
+            print("  Enter a whole number.")
+            continue
+        if val < minimum:
+            print(f"  Value must be >= {minimum}.")
+            continue
+        return val
+
+
+def _condition_default(mode: str, gen_provider: str, review_provider: str, difficulty: str) -> str:
+    del mode, difficulty
+    if gen_provider == "local" and review_provider == "local":
+        return "local/local"
+    if gen_provider == "local" and review_provider == "api":
+        return "local/haiku"
+    if gen_provider == "api" and review_provider == "local":
+        return "haiku/local"
+    if gen_provider == "api" and review_provider == "api":
+        return "haiku/haiku"
+    return f"{gen_provider}/{review_provider}"
+
+
+def _default_top_k_for_difficulty(difficulty: str) -> int:
+    return 12 if difficulty == "hard" else 6
+
+
+def _default_sleep_seconds(generate_provider: str, review_provider: str) -> float:
+    return 10.0 if "api" in {generate_provider, review_provider} else 0.0
+
+
+def _row_uses_api(row: dict[str, object]) -> bool:
+    return any(str(row.get(key, "")).lower() == "api" for key in ("generate_provider", "review_provider", "ingest_provider"))
+
+
+def _checkpoint_enabled_for_row(row: dict[str, object]) -> bool:
+    return bool(row.get("checkpoint_items")) or bool(row.get("checkpoint_review")) or bool(row.get("checkpoint_chunks"))
+
+
+def _child_domain_dirs(parent: Path) -> list[Path]:
+    return sorted([p for p in parent.iterdir() if p.is_dir()])
+
+
+def _build_row_cmd(row: dict[str, object], cli_path: Path) -> list[str]:
+    mode = str(row["mode"])
+    if mode == "generate":
+        cmd = [sys.executable, str(cli_path), "generate"]
+    elif mode == "baseline":
+        cmd = [sys.executable, str(cli_path), "baseline"]
+    elif mode == "pipeline":
+        cmd = [sys.executable, str(cli_path), "pipeline", "--force-ingest", "--clear-first"]
+    elif mode == "ingest":
+        cmd = [sys.executable, str(cli_path), "pipeline", "--force-ingest", "--clear-first", "--ingest-only"]
+    else:
+        raise ValueError(f"Unknown mode: {mode!r}")
+
+    if not bool(row.get("checkpoint_items", True)):
+        cmd.append("--no-checkpoint-items")
+    if not bool(row.get("checkpoint_review", True)):
+        cmd.append("--no-checkpoint-review")
+    if not bool(row.get("checkpoint_chunks", True)) and mode in {"pipeline", "ingest"}:
+        cmd.append("--no-checkpoint-chunks")
+    return cmd
+
+
+def _build_row_env(base_values: dict[str, str], row: dict[str, object], log_dir: Path, run_id: str) -> dict[str, str]:
+    env = dict(os.environ)
+    for k, v in base_values.items():
+        if v:
+            env[k] = v
+
+    env.pop("BASELINE_MODE", None)
+    env.pop("TOP_K", None)
+
+    domain_dir = str(row.get("domain_dir") or "").strip()
+    db_dsn = str(row.get("db_dsn") or "").strip()
+    mode = str(row["mode"])
+
+    if domain_dir:
+        env["DOMAIN_DIR"] = domain_dir
+    if mode != "baseline" and db_dsn:
+        env["DB_DSN"] = db_dsn
+    if mode == "baseline":
+        env["BASELINE_MODE"] = "true"
+
+    env["GENERATE_PROVIDER"] = str(row.get("generate_provider") or "local")
+    env["REVIEW_PROVIDER"] = str(row.get("review_provider") or "local")
+    if mode in {"pipeline", "ingest"}:
+        env["INGEST_PROVIDER"] = str(row.get("ingest_provider") or "local")
+
+    api_provider = str(row.get("api_provider") or "").strip()
+    api_model = str(row.get("api_model") or "").strip()
+    if api_provider:
+        env["API_PROVIDER"] = api_provider
+    if api_model:
+        env["API_MODEL"] = api_model
+
+    local_generator_model = str(row.get("local_generator_model") or "").strip()
+    local_review_model = str(row.get("local_review_model") or "").strip()
+    if local_generator_model:
+        env["GENERATOR_MODEL"] = local_generator_model
+    if local_review_model:
+        env["REVIEW_MODEL"] = local_review_model
+
+    env["DIFFICULTY_TARGET"] = str(row.get("difficulty") or "any")
+    n_items = row.get("n_items")
+    if n_items is not None:
+        env["N_ITEMS"] = str(int(n_items))
+    if mode in {"generate", "pipeline"} and row.get("top_k") is not None:
+        env["TOP_K"] = str(int(row["top_k"]))
+    if row.get("sleep_seconds") is not None:
+        env["SLEEP_SECONDS"] = str(float(row["sleep_seconds"]))
+
+    env["RUN_ID"] = run_id
+    env["LOG_DIR"] = str(log_dir)
+    env["OUT_DIR"] = str(log_dir)
+    return env
+
+
+def _write_batch_metadata(path: Path, data: dict[str, object]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+
+def _analytics_root(rag_root: Path) -> Path:
+    return rag_root.parent / "analytics"
+
+
+def _api_model_family(api_model: str, api_provider: str = "") -> str:
+    raw = (api_model or "").strip().lower()
+    for token in ("haiku", "sonnet", "opus", "gpt", "gemini"):
+        if token in raw:
+            return token
+    fallback = (api_provider or "").strip().lower()
+    return _slugify(fallback or raw or "api", max_len=24)
+
+
+def _promotion_target(row: dict[str, object], rag_root: Path) -> dict[str, str] | None:
+    mode = str(row.get("mode", "")).lower()
+    if mode not in {"generate", "pipeline"}:
+        return None
+
+    corpus = Path(str(row.get("domain_dir") or "")).name.strip()
+    if not corpus:
+        return None
+
+    gen = str(row.get("generate_provider") or "").lower()
+    rev = str(row.get("review_provider") or "").lower()
+    model_family = _api_model_family(str(row.get("api_model") or ""), str(row.get("api_provider") or ""))
+    analytics_root = _analytics_root(rag_root)
+
+    if gen == "local" and rev == "local":
+        suffix = "local-local"
+        dest_dir = analytics_root / f"{corpus}_{suffix}"
+        condition = "local/local"
+    elif gen == "local" and rev == "api":
+        suffix = f"{model_family}-reviewer"
+        dest_dir = analytics_root / f"{model_family}Permutations" / f"{corpus}_{suffix}"
+        condition = f"local/{model_family}"
+    elif gen == "api" and rev == "local":
+        suffix = f"{model_family}-generator"
+        dest_dir = analytics_root / f"{model_family}Permutations" / f"{corpus}_{suffix}"
+        condition = f"{model_family}/local"
+    elif gen == "api" and rev == "api":
+        suffix = f"{model_family}-both"
+        dest_dir = analytics_root / f"{model_family}Permutations" / f"{corpus}_{suffix}"
+        condition = f"{model_family}/{model_family}"
+    else:
+        return None
+
+    return {
+        "corpus": corpus,
+        "suffix": suffix,
+        "condition": condition,
+        "dest_dir": str(dest_dir),
+    }
+
+
+def _custom_batch_study_dir(rag_root: Path, base_run_id: str, study_slug: str) -> Path:
+    return _analytics_root(rag_root) / "_custom_batch_studies" / f"{base_run_id}_{study_slug}"
+
+
+def _promote_row_outputs(
+    row: dict[str, object],
+    row_log_dir: Path,
+    rag_root: Path,
+    base_run_id: str,
+    study_slug: str,
+) -> dict[str, object]:
+    target = _promotion_target(row, rag_root)
+    if target is None:
+        return {"status": "not_promoted", "reason": "row mode/provider combination is not mapped to merge-compatible analytics folders"}
+
+    run_xlsx = sorted(row_log_dir.glob("run_*.xlsx"))
+    if not run_xlsx:
+        return {"status": "not_promoted", "reason": "no run_*.xlsx found in row log directory"}
+
+    dest_dir = Path(target["dest_dir"])
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    archive_dir = dest_dir / "_custom_batch_artifacts" / row_log_dir.name
+    if archive_dir.exists():
+        shutil.rmtree(archive_dir)
+    shutil.copytree(row_log_dir, archive_dir)
+
+    promoted_files: list[str] = []
+    for xlsx in run_xlsx:
+        dest_xlsx = dest_dir / xlsx.name
+        shutil.copy2(xlsx, dest_xlsx)
+        promoted_files.append(str(dest_xlsx))
+
+    study_dir = _custom_batch_study_dir(rag_root, base_run_id, study_slug)
+    study_dir.mkdir(parents=True, exist_ok=True)
+    with open(study_dir / "promotion_log.jsonl", "a", encoding="utf-8") as f:
+        f.write(json.dumps({
+            "run_id": row.get("run_id"),
+            "condition_label": row.get("condition_label"),
+            "mapped_condition": target["condition"],
+            "dest_dir": str(dest_dir),
+            "archive_dir": str(archive_dir),
+            "promoted_files": promoted_files,
+            "promoted_at": _utc_iso(),
+        }) + "\n")
+
+    return {
+        "status": "promoted",
+        "dest_dir": str(dest_dir),
+        "archive_dir": str(archive_dir),
+        "promoted_files": promoted_files,
+        "mapped_condition": target["condition"],
+        "batch_suffix": target["suffix"],
+    }
+
+
+def _print_batch_plan(plan: dict[str, object]) -> None:
+    rows = list(plan.get("rows", []))
+    print("\n  " + "-" * 78)
+    print(f"  BATCH PLAN — {len(rows)} row(s)  |  study: {plan.get('study_label', '')}")
+    print("  " + "-" * 78)
+    print("   #  mode      domain        prov_gen  prov_rev  difficulty  n   topk  label")
+    for i, row in enumerate(rows, 1):
+        domain_name = Path(str(row.get('domain_dir') or "")).name or "-"
+        topk = "--" if row.get("top_k") is None else str(row.get("top_k"))
+        print(
+            f"   {i:<2} {str(row.get('mode','')):<9} "
+            f"{domain_name[:12]:<12} "
+            f"{str(row.get('generate_provider','')):<9} "
+            f"{str(row.get('review_provider','')):<9} "
+            f"{str(row.get('difficulty','')):<11} "
+            f"{str(row.get('n_items','')):<3} "
+            f"{topk:<5} "
+            f"{str(row.get('condition_label',''))}"
+        )
+    print("  " + "-" * 78)
+
+
+def _print_custom_batch_study_guide() -> None:
+    print("  Study guide for current example1 rebuild:")
+    print("    - no ingest")
+    print("    - use mode=generate for all study rows")
+    print("    - 12 rows total: 4 conditions x 3 difficulties")
+    print("    - conditions: local/local, local/haiku, haiku/local, haiku/haiku")
+    print("    - difficulties: easy, medium, hard")
+    print("    - n_items: 50 for every row")
+    print("    - TOP_K: 6 easy, 6 medium, 12 hard")
+    print("    - analytics after row: yes")
+    print("    - promote after batch: yes")
+    print("    - finalize after batch: yes")
+    print("")
+    print("  Provider mapping:")
+    print("    - local/local : generate local, review local")
+    print("    - local/haiku : generate local, review api")
+    print("    - haiku/local : generate api, review local")
+    print("    - haiku/haiku : generate api, review api")
+    print("")
+    print("  12-row cheat sheet:")
+    print("    1.  local/local  easy    top_k=6   n=50")
+    print("    2.  local/local  medium  top_k=6   n=50")
+    print("    3.  local/local  hard    top_k=12  n=50")
+    print("    4.  local/haiku  easy    top_k=6   n=50")
+    print("    5.  local/haiku  medium  top_k=6   n=50")
+    print("    6.  local/haiku  hard    top_k=12  n=50")
+    print("    7.  haiku/local  easy    top_k=6   n=50")
+    print("    8.  haiku/local  medium  top_k=6   n=50")
+    print("    9.  haiku/local  hard    top_k=12  n=50")
+    print("    10. haiku/haiku  easy    top_k=6   n=50")
+    print("    11. haiku/haiku  medium  top_k=6   n=50")
+    print("    12. haiku/haiku  hard    top_k=12  n=50")
+    print("")
+
+
+def _print_batch_row_help() -> None:
+    print("  Row guide:")
+    print("    - type B to abandon this row and go back")
+    print("    - type X to exit the batch builder")
+    print("    - first set the provider pair and difficulty")
+    print("    - press Enter for generate if this is a normal study row")
+    print("    - press Enter for example1 domain dir")
+    print("    - answer N for child-domain expansion")
+    print("    - use anthropic + claude-haiku-4-5-20251001 for api rows")
+    print("    - label is now derived automatically from the provider pair")
+    print("    - set difficulty explicitly: easy, medium, or hard (do not leave 'any')")
+    print("    - n_items defaults to 50 for study rows")
+    print("    - top_k defaults automatically: 6 easy/medium, 12 hard")
+    print("    - api rows now default to a 10.0s inter-item pacing delay")
+    print("    - leave analytics-after-row at the default yes")
+    print("")
+
+
+def _build_example1_study_rows(values: dict[str, str], start_row: int = 1) -> list[dict[str, object]]:
+    domain_dir = values.get("DOMAIN_DIR", "")
+    db_dsn = values.get("DB_DSN", "")
+    api_provider = (values.get("API_PROVIDER", "") or "anthropic").strip().lower()
+    api_model = (values.get("API_MODEL", "") or "claude-haiku-4-5-20251001").strip()
+    local_generator_model = values.get("GENERATOR_MODEL", "")
+    local_review_model = values.get("REVIEW_MODEL", "") or local_generator_model
+    checkpoint_items = values.get("CHECKPOINT_ITEMS", "false").lower() in {"1", "true", "yes", "y", "on"}
+    checkpoint_review = values.get("CHECKPOINT_REVIEW", "false").lower() in {"1", "true", "yes", "y", "on"}
+
+    condition_specs = [
+        ("local/local", "local", "local"),
+        ("local/haiku", "local", "api"),
+        ("haiku/local", "api", "local"),
+        ("haiku/haiku", "api", "api"),
+    ]
+    difficulty_specs = [
+        ("easy", 6),
+        ("medium", 6),
+        ("hard", 12),
+    ]
+
+    rows: list[dict[str, object]] = []
+    for condition_label, generate_provider, review_provider in condition_specs:
+        for difficulty, top_k in difficulty_specs:
+            row = {
+                "mode": "generate",
+                "domain_dir": domain_dir,
+                "db_dsn": db_dsn,
+                "generate_provider": generate_provider,
+                "review_provider": review_provider,
+                "ingest_provider": values.get("INGEST_PROVIDER", "local").strip().lower() or "local",
+                "api_provider": api_provider if "api" in {generate_provider, review_provider} else "",
+                "api_model": api_model if "api" in {generate_provider, review_provider} else "",
+                "local_generator_model": local_generator_model if generate_provider == "local" else "",
+                "local_review_model": local_review_model if review_provider == "local" else "",
+                "difficulty": difficulty,
+                "n_items": 50,
+                "top_k": top_k,
+                "sleep_seconds": _default_sleep_seconds(generate_provider, review_provider),
+                "condition_label": condition_label,
+                "checkpoint_items": checkpoint_items,
+                "checkpoint_review": checkpoint_review,
+                "checkpoint_chunks": False,
+                "run_analytics_after": True,
+                "domain_group_root": "",
+                "db_mode": "single",
+            }
+            rows.append(row)
+    if start_row <= 1:
+        return rows
+    if start_row > len(rows):
+        return []
+    return rows[start_row - 1 :]
+
+
+def _build_batch_row_interactive(values: dict[str, str], row_num: int) -> list[dict[str, object]] | None:
+    print(f"\n  Add row {row_num} of batch plan")
+    print("  " + "─" * 48)
+    _print_batch_row_help()
+
+    base_domain = values.get("DOMAIN_DIR", "")
+    base_dsn = values.get("DB_DSN", "")
+    base_api_provider = values.get("API_PROVIDER", "")
+    base_api_model = values.get("API_MODEL", "")
+    base_generator = values.get("GENERATOR_MODEL", "")
+    base_review = values.get("REVIEW_MODEL", "")
+    base_ingest_provider = values.get("INGEST_PROVIDER", "local").strip().lower() or "local"
+    base_generate_provider = values.get("GENERATE_PROVIDER", "local").strip().lower() or "local"
+    base_review_provider = values.get("REVIEW_PROVIDER", "local").strip().lower() or "local"
+
+    mode = _prompt_choice("Run mode [generate / baseline / pipeline / ingest]", ["generate", "baseline", "pipeline", "ingest"], "generate", allow_nav=True)
+    ingest_provider = base_ingest_provider
+    if mode in {"pipeline", "ingest"}:
+        ingest_provider = _prompt_choice("Ingest provider [local/api]", ["local", "api"], ingest_provider or "local", allow_nav=True)
+
+    generate_provider = _prompt_choice("Generate provider [local/api]", ["local", "api"], base_generate_provider, allow_nav=True)
+    review_provider = _prompt_choice("Review provider [local/api]", ["local", "api"], base_review_provider, allow_nav=True)
+
+    difficulty = _prompt_choice("Difficulty [easy/medium/hard/any]", ["easy", "medium", "hard", "any"], values.get("DIFFICULTY_TARGET", "any").strip().lower() or "any", allow_nav=True)
+    top_k = None
+    if mode in {"generate", "pipeline"}:
+        top_k = _default_top_k_for_difficulty(difficulty)
+        print(f"  TOP_K default for {difficulty}: {top_k}")
+        if _prompt_bool("Override TOP_K?", False, allow_nav=True):
+            top_k = _prompt_int("TOP_K", top_k, minimum=1, allow_nav=True)
+
+    default_n_items = 50 if mode in {"generate", "baseline"} else int(values.get("N_ITEMS", "5") or "5")
+    n_items = _prompt_int("N items", default_n_items, minimum=1, allow_nav=True)
+
+    domain_dir = _prompt_with_default("Corpus / domain dir", base_domain, allow_nav=True)
+    if not domain_dir:
+        print("  Domain dir is required.")
+        return None
+    domain_path = Path(domain_dir)
+    if not domain_path.exists():
+        print(f"  Domain dir not found: {domain_dir}")
+        return None
+
+    expand_child_domains = False
+    expanded_domain_dirs: list[Path] = [domain_path]
+    if mode in {"pipeline", "ingest"}:
+        child_dirs = _child_domain_dirs(domain_path)
+        if child_dirs:
+            expand_child_domains = _prompt_bool(
+                f"Treat immediate child folders in {domain_path.name} as separate domains?",
+                False,
+                allow_nav=True,
+            )
+            if expand_child_domains:
+                expanded_domain_dirs = child_dirs
+
+    db_dsn = ""
+    if mode != "baseline":
+        db_dsn = _prompt_with_default("DB DSN", base_dsn, allow_nav=True)
+        if not db_dsn:
+            print("  DB DSN is required for this mode.")
+            return None
+
+    derive_child_db_dsn = False
+    if expand_child_domains and mode in {"pipeline", "ingest"}:
+        derive_child_db_dsn = _prompt_bool(
+            "Derive a separate DB name for each child domain?",
+            True,
+            allow_nav=True,
+        )
+        if not derive_child_db_dsn:
+            print("  WARNING: all expanded child domains will share the same DB DSN.")
+            if not _prompt_bool("  Continue with shared DB DSN?", False, allow_nav=True):
+                print("  Cancelled row build.")
+                return None
+
+    api_needed = (mode in {"pipeline", "ingest"} and ingest_provider == "api") or generate_provider == "api" or review_provider == "api"
+    sleep_seconds = _default_sleep_seconds(generate_provider, review_provider)
+    api_provider = ""
+    api_model = ""
+    if api_needed:
+        api_provider = _prompt_choice("API provider [anthropic/openai/gemini]", ["anthropic", "openai", "gemini"], (base_api_provider or "anthropic").lower(), allow_nav=True)
+        api_model = _prompt_with_default("API model", base_api_model, allow_nav=True)
+        if not api_model:
+            print("  API model is required when any step uses api.")
+            return None
+        print(f"  API pacing delay default: {sleep_seconds:.1f}s between items")
+        if _prompt_bool("Override API pacing delay?", False, allow_nav=True):
+            try:
+                sleep_seconds = float(_prompt_with_default("Sleep seconds", str(sleep_seconds), allow_nav=True))
+            except ValueError:
+                print("  Invalid sleep seconds.")
+                return None
+
+    local_generator_model = ""
+    local_review_model = ""
+    if generate_provider == "local":
+        local_generator_model = _prompt_with_default("Local generator model", base_generator, allow_nav=True)
+        if not local_generator_model:
+            print("  Local generator model is required for local generate.")
+            return None
+    if review_provider == "local":
+        local_review_model = _prompt_with_default("Local review model", base_review or base_generator, allow_nav=True)
+        if not local_review_model:
+            print("  Local review model is required for local review.")
+            return None
+    if mode in {"pipeline", "ingest"} and ingest_provider == "local":
+        context_model = _prompt_with_default("Local ingest/context model", values.get("CONTEXT_MODEL", "") or base_generator, allow_nav=True)
+        if not context_model:
+            print("  Local ingest/context model is required for local ingest.")
+            return None
+        values = dict(values)
+        values["CONTEXT_MODEL"] = context_model
+
+    cond_default = _condition_default(mode, generate_provider, review_provider, difficulty)
+    print(f"  Condition label derived from providers: {cond_default}")
+    condition_label = cond_default
+
+    checkpoint_items = _prompt_bool("Checkpoint items?", values.get("CHECKPOINT_ITEMS", "true").lower() in {"1", "true", "yes", "y", "on"}, allow_nav=True)
+    checkpoint_review = _prompt_bool("Checkpoint review?", values.get("CHECKPOINT_REVIEW", "true").lower() in {"1", "true", "yes", "y", "on"}, allow_nav=True)
+    checkpoint_chunks = False
+    if mode in {"pipeline", "ingest"}:
+        checkpoint_chunks = _prompt_bool("Checkpoint chunks?", values.get("CHECKPOINT_CHUNKS", "true").lower() in {"1", "true", "yes", "y", "on"}, allow_nav=True)
+
+    run_analytics_after = _prompt_bool("Run analytics after this row?", True, allow_nav=True)
+
+    rows: list[dict[str, object]] = []
+    for expanded_domain in expanded_domain_dirs:
+        row_condition_label = condition_label
+        if expand_child_domains:
+            row_condition_label = f"{condition_label}-{expanded_domain.name}"
+        row_db_dsn = db_dsn
+        if derive_child_db_dsn:
+            row_db_dsn = _dsn_with_db(db_dsn, _folder_to_db_name(expanded_domain.name))
+        row = {
+            "mode": mode,
+            "domain_dir": str(expanded_domain),
+            "db_dsn": row_db_dsn,
+            "generate_provider": generate_provider,
+            "review_provider": review_provider,
+            "ingest_provider": ingest_provider,
+            "api_provider": api_provider,
+            "api_model": api_model,
+            "local_generator_model": local_generator_model,
+            "local_review_model": local_review_model,
+            "difficulty": difficulty,
+            "n_items": n_items,
+            "top_k": top_k,
+            "sleep_seconds": sleep_seconds,
+            "condition_label": row_condition_label,
+            "checkpoint_items": checkpoint_items,
+            "checkpoint_review": checkpoint_review,
+            "checkpoint_chunks": checkpoint_chunks,
+            "run_analytics_after": run_analytics_after,
+            "domain_group_root": str(domain_path) if expand_child_domains else "",
+            "db_mode": "per_child" if derive_child_db_dsn else ("shared" if expand_child_domains else "single"),
+        }
+        if mode in {"pipeline", "ingest"} and ingest_provider == "local":
+            row["local_context_model"] = values.get("CONTEXT_MODEL", "")
+        rows.append(row)
+    return rows
+
+
+def _build_batch_plan_interactive(values: dict[str, str]) -> dict[str, object] | None:
+    print(f"\n{'=' * 52}")
+    print("  CUSTOM BATCH BUILDER")
+    print(f"{'=' * 52}")
+    _print_custom_batch_study_guide()
+
+    study_label = _prompt_with_default("Study label", "example1_50x3_study")
+    try:
+        if _prompt_bool("Build the standard 12-row example1 study automatically?", True, allow_nav=True):
+            start_row = _prompt_int("Resume standard study from row number", 1, minimum=1, allow_nav=True)
+            rows = _build_example1_study_rows(values, start_row=start_row)
+            if not rows:
+                print("  No rows remain for that resume point.")
+                return None
+            return {
+                "study_label": study_label,
+                "promote_after_batch": _prompt_bool("Promote successful rows into analytics study folders?", True, allow_nav=True),
+                "finalize_after_batch": _prompt_bool("After generation, run merge + Claude Opus review + final analytics?", True, allow_nav=True),
+                "rows": rows,
+                "created_at": _utc_iso(),
+                "base_run_id": _utc_now(),
+            }
+    except _BatchExit:
+        print("\nCancelled batch builder.")
+        return None
+    except _BatchBack:
+        print("\nCancelled batch builder.")
+        return None
+
+    rows: list[dict[str, object]] = []
+
+    while True:
+        try:
+            built_rows = _build_batch_row_interactive(values, len(rows) + 1)
+        except _BatchExit:
+            print("\nCancelled batch builder.")
+            return None
+        except _BatchBack:
+            if rows:
+                if not _prompt_bool("Add another row?", True):
+                    break
+                continue
+            print("  Already at the first row.")
+            continue
+        if built_rows is not None:
+            rows.extend(built_rows)
+        else:
+            if rows:
+                if not _prompt_bool("No row added. Return to plan and stop adding rows?", True):
+                    continue
+                break
+            retry = _prompt_bool("Retry this row?", True)
+            if retry:
+                continue
+        if rows and not _prompt_bool("Add another row?", True):
+            break
+        if not rows and built_rows is None and not _prompt_bool("No rows added yet. Add a row now?", True):
+            return None
+
+    if not rows:
+        return None
+
+    return {
+        "study_label": study_label,
+        "promote_after_batch": _prompt_bool("Promote successful rows into analytics study folders?", True),
+        "finalize_after_batch": _prompt_bool("After generation, run merge + Claude Opus review + final analytics?", True),
+        "rows": rows,
+        "created_at": _utc_iso(),
+        "base_run_id": _utc_now(),
+    }
+
+
+def _run_custom_batch(values: dict[str, str], rag_root_val: Path, cli_path: Path) -> None:
+    plan = _build_batch_plan_interactive(values)
+    if not plan:
+        print("\nNo batch plan created.")
+        return
+
+    rows = list(plan["rows"])
+    if any(_row_uses_api(row) for row in rows):
+        current_key = os.environ.get("LLM_API_KEY", "").strip()
+        if not current_key:
+            print("\n  API key required for one or more batch rows.")
+            new_key = _masked_input("  LLM API key (not saved to config.env)\n  New value: ")
+            if new_key and new_key.strip():
+                os.environ["LLM_API_KEY"] = new_key.strip()
+
+    _print_batch_plan(plan)
+    if not _prompt_bool("Proceed?", False):
+        print("\nCancelled.")
+        return
+
+    runs_root = _default_run_root()
+    runs_root.mkdir(parents=True, exist_ok=True)
+
+    study_slug = _slugify(str(plan["study_label"]))
+    base_run_id = str(plan["base_run_id"])
+    plan_path = runs_root / f"batch_{base_run_id}_{study_slug}_plan.json"
+    results_path = runs_root / f"batch_{base_run_id}_{study_slug}_results.json"
+    summary_path = runs_root / f"batch_{base_run_id}_{study_slug}_summary.txt"
+    _write_batch_metadata(plan_path, plan)
+
+    _hdr(f"CUSTOM BATCH  —  {plan['study_label']}  [{len(rows)} row(s)]")
+    print(f"  batch id : {base_run_id}")
+    print(f"  runs dir : {runs_root}")
+
+    summary_lines: list[str] = []
+    results_rows: list[dict[str, object]] = []
+    promote_after_batch = bool(plan.get("promote_after_batch", True))
+    finalize_after_batch = bool(plan.get("finalize_after_batch", True))
+
+    for i, row in enumerate(rows, 1):
+        row = dict(row)
+        label = str(row.get("condition_label", f"row_{i}"))
+        row_run_id = f"{_utc_now()}_{_slugify(label)}"
+        row_log_dir = runs_root / f"logs_{row_run_id}"
+        row_log_dir.mkdir(parents=True, exist_ok=True)
+
+        row["run_id"] = row_run_id
+        row["log_dir"] = str(row_log_dir)
+
+        _sub(f"Row {i}/{len(rows)}  —  {label}")
+        print(f"  mode    : {row['mode']}")
+        print(f"  domain  : {row['domain_dir']}")
+        print(f"  log dir : {row_log_dir}")
+
+        cmd = _build_row_cmd(row, cli_path)
+        env = _build_row_env(values, row, row_log_dir, row_run_id)
+        if "local_context_model" in row and row["local_context_model"]:
+            env["CONTEXT_MODEL"] = str(row["local_context_model"])
+
+        log_file = row_log_dir / ("console_generate.txt" if row["mode"] in {"generate", "baseline"} else "console_pipeline.txt")
+        row_info_extra = {
+            "BATCH_STUDY": str(plan["study_label"]),
+            "BATCH_CONDITION_LABEL": label,
+            "BATCH_ROW_INDEX": str(i),
+            "BATCH_TOTAL_ROWS": str(len(rows)),
+            "RUN_MODE": str(row["mode"]),
+            "USES_PGVECTOR": str(row["mode"] != "baseline").lower(),
+            "USES_RETRIEVAL": str(row["mode"] in {"generate", "pipeline"}).lower(),
+            "TOP_K": "" if row.get("top_k") is None else str(row["top_k"]),
+            "DB_MODE": str(row.get("db_mode", "")),
+            "DOMAIN_GROUP_ROOT": str(row.get("domain_group_root", "")),
+            "RUN_START": _utc_iso(),
+        }
+        _write_run_info(row_log_dir / "run_info.txt", env, row_run_id, row_info_extra)
+
+        t0 = time.perf_counter()
+        if _checkpoint_enabled_for_row(row):
+            result = subprocess.run(cmd, env=env)
+            returncode = result.returncode
+            log_file.write_text(
+                "[interactive run — stdout not captured when checkpoints enabled]\n"
+                f"returncode={returncode}\n",
+                encoding="utf-8",
+            )
+        else:
+            returncode = _run_tee(cmd, log_file, env)
+        elapsed = time.perf_counter() - t0
+        h = int(elapsed // 3600)
+        m = int((elapsed % 3600) // 60)
+        s = int(elapsed % 60)
+        duration_str = f"{h}h {m}m {s}s"
+
+        row["returncode"] = returncode
+        row["duration_str"] = duration_str
+        summary_status = "OK" if returncode == 0 else f"FAILED (exit {returncode})"
+        summary_lines.append(f"{i}|{label}|{summary_status}|{duration_str}|{row_run_id}")
+
+        _write_run_info(
+            row_log_dir / "run_info.txt",
+            env,
+            row_run_id,
+            {**row_info_extra, "RUN_END": _utc_iso(), "RUN_DURATION": duration_str, "EXIT_CODE": str(returncode)},
+        )
+
+        docker_container = env.get("DOCKER_CONTAINER", "")
+        if docker_container:
+            _capture_docker_logs(docker_container, row_log_dir / f"docker_{docker_container}.log")
+        lmstudio_log = env.get("LMSTUDIO_LOGPATH", "")
+        if lmstudio_log:
+            _capture_lmstudio_logs(lmstudio_log, row_log_dir / "lmstudio.log")
+
+        print(f"\n  [{i}/{len(rows)}] {label}: {summary_status} — {duration_str}")
+
+        if returncode == 0 and bool(row.get("run_analytics_after")):
+            _sub("ANALYTICS")
+            _run_analytics(row_log_dir, rag_root_val)
+
+        if returncode == 0 and promote_after_batch:
+            promote_info = _promote_row_outputs(row, row_log_dir, rag_root_val, base_run_id, study_slug)
+            row["promotion"] = promote_info
+            if promote_info.get("status") == "promoted":
+                print(f"  promoted: {promote_info.get('dest_dir')}")
+            else:
+                print(f"  promotion skipped: {promote_info.get('reason')}")
+
+        results_rows.append(row)
+
+        if returncode != 0:
+            if not _prompt_bool("Continue to next row?", True):
+                break
+
+    results_doc = dict(plan)
+    results_doc["rows"] = results_rows
+    _write_batch_metadata(results_path, results_doc)
+    summary_path.write_text("\n".join(summary_lines) + ("\n" if summary_lines else ""), encoding="utf-8")
+
+    study_dir = _custom_batch_study_dir(rag_root_val, base_run_id, study_slug)
+    study_dir.mkdir(parents=True, exist_ok=True)
+    for src in (plan_path, results_path, summary_path):
+        shutil.copy2(src, study_dir / src.name)
+
+    _hdr("CUSTOM BATCH COMPLETE")
+    print(f"  study   : {plan['study_label']}")
+    print(f"  plan    : {plan_path}")
+    print(f"  results : {results_path}")
+    print(f"  summary : {summary_path}")
+    if promote_after_batch:
+        print(f"  archive : {study_dir}")
+
+    all_success = bool(results_rows) and all(int(row.get("returncode", 1)) == 0 for row in results_rows)
+    if finalize_after_batch:
+        if all_success:
+            _run_finalize_study(rag_root_val)
+        else:
+            print("\n[finalize] Skipped automatic finalization because one or more rows failed.")
 
 
 # ---------------------------------------------------------------------------
@@ -732,6 +1572,7 @@ def _run_multi_domain(values: dict[str, str], rag_root_val: Path, cli_path: Path
         env["DB_DSN"] = dsn
         env["RUN_ID"] = f"{run_id}_{i:02}"
         env["LOG_DIR"] = str(log_dir_base)
+        env["OUT_DIR"] = str(log_dir_base)
 
         # Build command
         if mode in {"P", "F"}:
@@ -782,12 +1623,15 @@ def _analytics_script(rag_root: Path) -> Path:
     return rag_root.parent / "analytics" / "analyticsVizs.py"
 
 
+def _finalize_script(rag_root: Path) -> Path:
+    return rag_root.parent / "analytics" / "finalize_study.py"
+
+
 def _run_analytics(log_dir: Path, rag_root: Path) -> None:
     """Run analyticsVizs.py on a completed run's log directory."""
     script = _analytics_script(rag_root)
     if not script.exists():
         print(f"\n[analytics] analyticsVizs.py not found at {script} — skipping.")
-        print("[analytics] (analytics/ is local-only; copy scripts there to enable viz)")
         return
     print(f"\n[analytics] Running viz on {log_dir.name} ...")
     result = subprocess.run([sys.executable, str(script), str(log_dir)])
@@ -797,12 +1641,24 @@ def _run_analytics(log_dir: Path, rag_root: Path) -> None:
         print(f"[analytics] Done.")
 
 
+def _run_finalize_study(rag_root: Path) -> None:
+    script = _finalize_script(rag_root)
+    if not script.exists():
+        print(f"\n[finalize] finalize_study.py not found at {script} — skipping.")
+        return
+    print(f"\n[finalize] Running merge + Claude Opus review + final analytics ...")
+    result = subprocess.run([sys.executable, str(script), "--score-opus"])
+    if result.returncode != 0:
+        print(f"[finalize] Exited with code {result.returncode}")
+    else:
+        print(f"[finalize] Done.")
+
+
 def _run_analytics_latest(rag_root: Path) -> None:
     """Find the most recent run and run analytics on it."""
     script = _analytics_script(rag_root)
     if not script.exists():
         print(f"\n[analytics] analyticsVizs.py not found at {script}")
-        print("[analytics] (analytics/ is local-only; copy scripts there to enable viz)")
         return
     runs_dir = _default_run_root()
     candidates = sorted(runs_dir.glob("logs_*"), key=lambda p: p.name) if runs_dir.exists() else []
@@ -834,7 +1690,7 @@ def _sub(label: str) -> None:
 
 
 def main() -> None:
-    # Determine rag_root: the directory containing runner.py
+    # Determine rag_root: the directory containing interactive_run.py
     rag_root = Path(__file__).resolve().parent
     config_path = _find_config_env(rag_root)
 
@@ -884,6 +1740,7 @@ def main() -> None:
         print("  Run mode\n")
         print("  ── Batch / Pipeline " + "─" * 31)
         print("  B  Batch run    generate (from db) + analytics")
+        print("  C  Custom batch build a batch plan row by row")
         print("  P  Pipeline     ingest + generate")
         print("  F  Full         ingest + generate + analytics")
         print()
@@ -912,7 +1769,7 @@ def main() -> None:
             print("\nExiting.")
             break
 
-        if run_choice not in {"B", "F", "P", "I", "G", "A", "Q", "M"}:
+        if run_choice not in {"B", "C", "F", "P", "I", "G", "A", "Q", "M"}:
             print("  Invalid choice. Try again.")
             continue
 
@@ -941,13 +1798,23 @@ def main() -> None:
             _run_analytics_latest(rag_root_val)
             continue
 
+        if run_choice == "C":
+            _run_custom_batch(values, rag_root_val, cli_path)
+            try:
+                again = input("\nRun again? (Y/N, default N): ").strip().lower()
+            except (EOFError, KeyboardInterrupt):
+                break
+            if again not in {"y", "yes"}:
+                break
+            continue
+
         domain_dir = values.get("DOMAIN_DIR", "")
         if not domain_dir or not Path(domain_dir).exists():
             print(f"\nERROR: DOMAIN_DIR not found: {domain_dir}")
             continue
 
         run_id = _utc_now()
-        log_dir = rag_root_val / "runs" / f"logs_{run_id}"
+        log_dir = _default_run_root() / f"logs_{run_id}"
         log_dir.mkdir(parents=True, exist_ok=True)
 
         env = _build_env(values, log_dir, run_id)

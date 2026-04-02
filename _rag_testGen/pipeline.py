@@ -826,12 +826,14 @@ def generate_from_db(cfg: GenerateConfig) -> dict[str, Any]:
         pre_review_items = _checkpoint_items(pre_review_items)
 
     # Run reviewer on approved items
-    for item in pre_review_items:
+    for idx, item in enumerate(pre_review_items, start=1):
         item_id = item["item_id"]
         gen_text = item["gen_text_clean"]
         context_block = item.get("context_block", "")
         max_rev_chars = int(os.environ.get("MAX_CONTEXT_CHARS_REV", "2000"))
         context_for_review = _cap_text(context_block, max_rev_chars)
+
+        print(f"\n[{time.strftime('%H:%M:%S')}] Reviewing {item_id} ({idx}/{len(pre_review_items)})...", file=sys.stderr, flush=True)
 
         rev_clean, elapsed = _run_reviewer(
             gen_text=gen_text,
@@ -846,6 +848,7 @@ def generate_from_db(cfg: GenerateConfig) -> dict[str, Any]:
             review_provider=cfg.review_provider,
         )
         elapsed_review += elapsed
+        print(f"    [{time.strftime('%H:%M:%S')}] Done in {elapsed:.1f}s", file=sys.stderr, flush=True)
 
         if rev_clean.get("reviewer_parse_ok"):
             reviewer_json_ok += 1
@@ -1065,10 +1068,12 @@ def generate_baseline(cfg: BaselineConfig) -> dict[str, Any]:
     if cfg.checkpoint_items:
         pre_review_items = _checkpoint_items(pre_review_items)
 
-    for item in pre_review_items:
+    for idx, item in enumerate(pre_review_items, start=1):
         item_id = item["item_id"]
         gen_text = item["gen_text_clean"]
         context_for_review = _cap_text(item.get("context_block", ""), 2000)
+
+        print(f"\n[{time.strftime('%H:%M:%S')}] Reviewing {item_id} ({idx}/{len(pre_review_items)})...", file=sys.stderr, flush=True)
 
         rev_clean, elapsed = _run_reviewer(
             gen_text=gen_text,
@@ -1083,6 +1088,7 @@ def generate_baseline(cfg: BaselineConfig) -> dict[str, Any]:
             review_provider=cfg.review_provider,
         )
         elapsed_review += elapsed
+        print(f"    [{time.strftime('%H:%M:%S')}] Done in {elapsed:.1f}s", file=sys.stderr, flush=True)
 
         if rev_clean.get("reviewer_parse_ok"):
             reviewer_json_ok += 1

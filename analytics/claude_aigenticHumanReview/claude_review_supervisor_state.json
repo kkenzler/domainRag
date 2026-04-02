@@ -1,0 +1,14 @@
+﻿{
+    "updated_at":  "2026-03-30T18:46:45.9329163-07:00",
+    "action":  "status_only",
+    "count":  150,
+    "target_count":  1200,
+    "inbox_count":  0,
+    "quiet_seconds":  20,
+    "listener_status":  "listening",
+    "listener_note":  "Awaiting queued prompts.",
+    "listener_last_message_id":  "",
+    "last_queue_result":  "",
+    "last_queue_reason":  "",
+    "no_progress_queue_count":  0
+}

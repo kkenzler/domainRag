@@ -1,5 +1,5 @@
 @echo off
 setlocal
 set "SCRIPT_DIR=%~dp0"
-python "%SCRIPT_DIR%_rag_testGen\interactive_run.py"
+python "%SCRIPT_DIR%analytics\run_full_study.py"
 pause
