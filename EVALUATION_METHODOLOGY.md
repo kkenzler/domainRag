@@ -2,7 +2,7 @@
 
 ## Project Goal
 
-domainRag is a systematic study tool for evaluating whether Retrieval-Augmented Generation (RAG) improves the quality of multiple-choice assessment items generated from domain-specific source documents. It compares RAG-enabled generation against baseline (non-RAG) generation to determine if grounding outputs in retrieved context produces measurably better items.
+domainRag is a systematic study tool for evaluating whether Retrieval-Augmented Generation (RAG) improves the quality of multiple-choice assessment items generated from domain-specific source documents. It compares RAG-enabled generation against baseline generation from a frontier model to determine if grounding outputs in retrieved context produces measurably comparable items.
 
 ---
 
@@ -12,7 +12,7 @@ domainRag is a systematic study tool for evaluating whether Retrieval-Augmented 
 
 The system ingests source documents (PDF, PPTX, DOCX, TXT) and extracts "knowledge chunks" using an LLM. These chunks are embedded via LM Studio (local) and stored in PostgreSQL with pgvector for similarity search.
 
-**Methodological assumption:** Chunk quality is the first gate. If the ingestion stage produces poor chunks, downstream generation has no hope of quality.
+**Methodological assumption:** Chunk quality is the first gate. If the ingestion stage produces poor chunks, downstream generation has no hope of quality. Chunks are held constant and for best results handled by a frontier model - API costing was ~$0.5 and time to chunk was neglible.
 
 **Critical question not fully addressed:** How is "chunk quality" measured before generation? The system retrieves chunks during generation, but there's no pre-flight validation that chunks adequately represent the source document's conceptual landscape.
 
@@ -20,12 +20,13 @@ The system ingests source documents (PDF, PPTX, DOCX, TXT) and extracts "knowled
 
 For each item to generate:
 1. The system retrieves top-K chunks from pgvector based on similarity to the item prompt
-2. Retrieved chunks are packed into the LLM context window
+2. Retrieved chunks are packed into the LLM context window 
 3. The generator LLM produces a multiple-choice item
 
 **The comparison framework:** The system generates the same item prompts under two conditions:
-- **RAG condition:** chunks are included in context
-- **Baseline condition:** no chunks (or minimal context)
+- local or api haiku
+	- haiku costs are neglible as compared to frontier model at fractions of a cent for complete study generation of 400 questions each from reviewer AND generator agent roles
+**RAG condition:** chunks are included in context
 
 This is the right experimental design. However, the prompt used for generation is identical between conditions—only the retrieved context differs. This controls for prompt wording as a confound.
 
@@ -63,7 +64,7 @@ This creates a combinatorial design:
 
 **Value:** This allows isolating the effect of each stage's provider. Does RAG help more when using API generation? Does local review align with API review?
 
-**Weakness:** Each permutation multiplies runs. At 50 items × 3 difficulties × N conditions, studies become expensive in compute and time. The system doesn't appear to have formal power analysis or sample size justification.
+**Weakness:** Each permutation multiplies runs. At 50 items × 3 difficulties × N conditions, studies become expensive in compute and time. The system doesn't have formal power analysis or sample size justification.
 
 ---
 
