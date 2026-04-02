@@ -10,7 +10,7 @@ HOW TO START
 ------------
 Windows:   Double-click  _run_testGen.bat
 Mac/Linux: ./_run_testGen.sh  (chmod +x required on first use)
-           OR: python3 _rag_testGen/runner.py
+           OR: python3 _rag_testGen/interactive_run.py
 
 First run: when prompted "Update settings?" enter Y and set all paths and
 model names. Settings are saved to `C:\Users\kadek\secrets\domainRag\config.env`
@@ -50,7 +50,7 @@ PREREQUISITES
 
 USAGE
 -----
-On startup, runner.py asks:
+On startup, interactive_run.py asks:
   - Update settings? (Y/N) -- review and edit the persisted config values
   - Run mode:
       F = Full pipeline    ingest domain folder + generate items (RAG mode)

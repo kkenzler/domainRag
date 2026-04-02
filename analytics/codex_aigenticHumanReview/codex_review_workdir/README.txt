@@ -1,0 +1,21 @@
+Codex manual review workdir
+
+Files:
+- claude_review_input.json
+- codex_review_decisions.json
+
+This folder exists to keep long manual review passes inside the repo workspace.
+Do not write batch-by-batch decisions directly to the secrets review folder.
+
+The Codex decision file uses neutral review fields:
+- review_source_alignment
+- review_distractor_quality
+- review_stem_clarity
+- review_difficulty_match
+- review_decision
+- review_notes
+
+If tooling must point here, set:
+- DOMAINRAG_REVIEW_DIR
+- DOMAINRAG_REVIEW_INPUT_JSON=claude_review_input.json
+- DOMAINRAG_REVIEW_DECISIONS_JSON=codex_review_decisions.json

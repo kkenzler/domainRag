@@ -138,11 +138,11 @@ def assess(xlsx_path: str) -> bool:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        # Auto-find most recent xlsx in runs/
-        runs_dir = Path(__file__).parent / "runs"
+        # Auto-find most recent xlsx in the secrets-backed run root.
+        runs_dir = Path.home() / "secrets" / "domainRag" / "runs"
         xls = sorted(runs_dir.glob("run_*.xlsx"), key=lambda p: p.stat().st_mtime, reverse=True)
         if not xls:
-            print("No run xlsx found in runs/")
+            print("No run xlsx found in %s" % runs_dir)
             sys.exit(2)
         target = str(xls[0])
         print("Auto-selected: %s" % target)

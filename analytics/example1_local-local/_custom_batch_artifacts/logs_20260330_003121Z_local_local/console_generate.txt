@@ -1,0 +1,46 @@
+STARTUP
+python_exe=C:\Users\kadek\source\tools\Python312\python.exe
+program_root=C:\Users\kadek\source\repos\domainRag\_rag_testGen
+cmd=generate
+rag_root=C:\Users\kadek\source\repos\domainRag\_rag_testGen
+domain_dir=C:\Users\kadek\source\repos\domainRag\example1
+db_dsn=postgresql://postgres:***@localhost:5435/kinaxis_ragtestdb
+lm_url=http://localhost:1234
+
+--------------- local lane ---------------
+context_model=qwen/qwen2.5-vl-7b
+generator_model=qwen2.5-7b-instruct-uncensored
+review_model=qwen2.5-7b-instruct-uncensored
+embed_model=text-embedding-nomic-embed-text-v1.5@q8_0
+
+--------------- api lane ---------------
+api_provider=anthropic
+api_model=claude-haiku-4-5-20251001
+
+--------------- routing ---------------
+ingest=local -> lmstudio/qwen/qwen2.5-vl-7b
+generate=local -> lmstudio/qwen2.5-7b-instruct-uncensored
+review=local -> lmstudio/qwen2.5-7b-instruct-uncensored
+
+--------------- run ---------------
+n_items=50
+run_id=20260330_003121Z_local_local
+prompts_dir=C:\Users\kadek\source\repos\domainRag\_rag_testGen\_prompts
+out_dir=C:\Users\kadek\secrets\domainRag\runs\logs_20260330_003121Z_local_local
+force_ingest=False
+ingest_only=False
+baseline_mode=False
+checkpoint_chunks=False
+checkpoint_items=False
+checkpoint_review=False
+
+GENERATE_SUMMARY
+run_id=20260330_003121Z_local_local
+mode=rag
+condition_label=rag
+items_total=50
+items_schema_ok=50
+reviewer_json_ok=50
+reviewer_schema_ok=50
+decisions={'REVISE': 29, 'ACCEPT': 21}
+files={'xlsx': 'C:\\Users\\kadek\\secrets\\domainRag\\runs\\logs_20260330_003121Z_local_local\\run_20260330_003121Z_local_local.xlsx', 'manifest_json': 'C:\\Users\\kadek\\secrets\\domainRag\\runs\\logs_20260330_003121Z_local_local\\run_manifest_20260330_003121Z_local_local.json'}

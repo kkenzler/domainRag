@@ -1,0 +1,14 @@
+﻿{
+    "updated_at":  "2026-03-30T21:09:06.8764229-07:00",
+    "action":  "waiting",
+    "count":  600,
+    "target_count":  1200,
+    "inbox_count":  0,
+    "quiet_seconds":  111.7,
+    "listener_status":  "listening",
+    "listener_note":  "Awaiting queued prompts.",
+    "listener_last_message_id":  "",
+    "last_queue_result":  "queued=C:\\Users\\kadek\\source\\.cogark\\agent_infra\\agent_sync\\queues\\codex\\inbox\\20260330-210846-568478.json chars=1287",
+    "last_queue_reason":  "initial_quiet_queue",
+    "no_progress_queue_count":  0
+}

@@ -1,480 +1,514 @@
-# domainRag — System Context
-
-## What This Program Does
-
-`_rag_testGen` is a Python pipeline that generates multiple-choice exam items grounded in domain
-source material using a retrieval-augmented generation (RAG) architecture with a separate
-critic/reviewer model. It ingests domain documents (PDF, PPTX, DOCX, TXT), extracts structured
-knowledge chunks via a context model, embeds them into Postgres+pgvector, then uses a generator
-LLM + reviewer LLM to produce structured MCQ items with quality scores. The system is designed
-to answer two research questions: does a dual-model agentic RAG architecture produce measurably
-higher-quality items than a single-model no-RAG baseline, and does agentic critique reduce human
-review burden?
+# domainRag
 
 ---
 
-## Project Structure
+## Purpose
 
-```
-_rag_testGen/
-├── cli.py                  # Entrypoint; dispatches ingest / generate / baseline / pipeline subcommands
-├── config.py               # Loads env vars into ResolvedConfig dataclass
-├── pipeline.py             # Orchestrates ingest + generate phases; human-in-the-loop checkpoints; writes XLSX
-├── ingest.py               # Loads docs, context model extracts knowledge chunks, embeds, upserts to pgvector
-├── loaders.py              # Document loaders (PDF, PPTX, DOCX, TXT) + preprocess_text(); text extraction only
-├── llm_client.py           # Unified LLM provider abstraction (lmstudio/openai/anthropic/gemini); text + vision
-├── embed_lmstudio.py       # LM Studio /v1/embeddings client (embeddings remain local)
-├── db_pgvector.py          # All Postgres/pgvector DB access (schema, upsert, search, snapshots)
-├── text_utils.py           # Generator output cleaning, schema validation, reviewer hygiene
-├── interactive_run.py               # Cross-platform launcher: config persistence, run mode, log capture, run-again loop
-├── __init__.py             # Package marker
-├── __main__.py             # Allows `python -m _rag_testGen`
-├── _prompts/
-│   ├── generator_system.txt
-│   ├── generator_user.txt      # Contains {{CONTEXT}} placeholder
-│   ├── reviewer_system.txt
-│   ├── reviewer_user.txt       # Contains {{GEN_ITEM}} and {{CONTEXT}} placeholders
-│   ├── context_system.txt      # Knowledge extraction instructions for context model
-│   └── context_user.txt        # Contains {{DOCUMENT}} placeholder (text mode only)
-├── runs/                  # runtime output root now defaults to C:\Users\kadek\secrets\domainRag\runs\
-│   └── logs_RUNID/
-│       ├── console_pipeline.txt / console_generate.txt / console_baseline.txt
-│       ├── run_info.txt
-│       ├── run_RUNID.xlsx
-│       ├── run_manifest_RUNID.json
-│       ├── lmstudio.log
-│       ├── llm_http.jsonl
-│       └── docker_CONTAINERNAME.log
-└── config.env.example      # Safe template; real config lives under C:\Users\kadek\secrets\domainRag\
+`domainRag` generates multiple-choice items grounded in source documents.
 
-_run_testGen.bat            # Windows thin shim — calls interactive_run.py
-_run_testGen.sh             # Mac/Linux thin shim — calls interactive_run.py (chmod +x required)
-```
+The core system:
+- ingests domain documents
+- extracts knowledge chunks with an LLM
+- embeds those chunks into Postgres + pgvector
+- retrieves relevant chunks during generation
+- generates items
+- reviews items with a second pass
+- writes structured XLSX outputs for analysis
+
+Primary use cases:
+- RAG vs no-RAG comparison
+- local vs API review/generation comparison
+- unattended batch studies
+- human or Claude follow-up review over generated runs
 
 ---
 
-## Launcher
+## Repo Layout
 
-Both `_run_testGen.bat` (Windows) and `_run_testGen.sh` (Mac/Linux) are thin shims that
-simply call `python interactive_run.py` or `python3 interactive_run.py`. All orchestration logic lives in
-`interactive_run.py`.
-
-### `interactive_run.py`
-
-- Loads and saves the persisted config file (default: `C:\Users\kadek\secrets\domainRag\config.env`)
-- Prompts user: update settings? (Y/N), shows current values
-- Prompts user: run mode F / I / G / B
-  - F = Full pipeline (ingest + generate, RAG mode)
-  - I = Ingest only (extract knowledge chunks, write XLSX)
-  - G = Generate only (use existing DB chunks, RAG mode)
-  - B = Baseline (no-RAG, load docs directly)
-- Generates RUN_ID (UTC timestamp)
-- Creates a secrets-backed `runs/logs_RUNID/` directory
-- Sets environment variables for subprocess
-- Calls `cli.py` via subprocess
-- When checkpoints are disabled: tees stdout to console + log file
-- When checkpoints are enabled: direct subprocess (stdin passes through for interactive prompts)
-- Captures docker logs and LM Studio logs into run folder after completion
-- Writes `run_info.txt` with config + timing
-- Asks "Run again?" loop
-
----
-
-## Pipeline Flow
-
-```
-_run_testGen.bat / _run_testGen.sh
-  └── interactive_run.py
-        └── cli.py  (pipeline / generate / ingest / baseline subcommand)
-              ├── ingest phase:
-              │     loaders.py → load_document()         [text extraction, all types]
-              │     ingest.py → extract_knowledge_chunks()
-              │       ├── PDFs: llm_client.py → call_llm_vision()
-              │       │     lmstudio/openai/gemini: render pages → image_url blocks (batched)
-              │       │     anthropic: raw PDF → document block (one call, native)
-              │       └── PPTX/DOCX/TXT: llm_client.py → call_llm() [text mode]
-              │     embed_lmstudio.py → embed_texts()
-              │     db_pgvector.py → upsert_chunks()
-              │     [CHECKPOINT 1] human reviews knowledge chunks (optional)
-              │
-              └── generate phase (per item):
-                    db_pgvector.py → get_random_chunks() [seed]
-                    embed_lmstudio.py → embed_texts() [seed embedding]
-                    db_pgvector.py → similarity_search() [top-k retrieval]
-                    llm_client.py → call_llm() [generator]
-                    [CHECKPOINT 2] human reviews generated items (optional)
-                    llm_client.py → call_llm() [reviewer]
-                    [CHECKPOINT 3] human reviews flagged items (optional)
-                    pipeline.py → write_run_xlsx()
+```text
+domainRag/
+├── _rag_testGen/
+│   ├── cli.py
+│   ├── config.py
+│   ├── pipeline.py
+│   ├── ingest.py
+│   ├── loaders.py
+│   ├── llm_client.py
+│   ├── embed_lmstudio.py
+│   ├── db_pgvector.py
+│   ├── text_utils.py
+│   ├── interactive_run.py
+│   ├── transcribe_corpus.py
+│   ├── assess_run.py
+│   └── _prompts/
+├── analytics/
+│   ├── analyticsVizs.py
+│   ├── run_batches.py
+│   ├── merge_runs.py
+│   └── aigenticHumanReview.py
+├── example1/
+├── _run_testGen.bat
+├── _run_testGen.sh
+├── README.txt
+└── DEVOPS.md
 ```
 
 ---
 
-## Key Modules
+## Runtime Surfaces
 
-### `loaders.py`
-- `load_document(path)` — dispatches by extension: `.pdf` → PyMuPDF + pypdf fallback,
-  `.pptx` → python-pptx (text + speaker notes), `.docx` → python-docx, `.txt/.md` → plain read
-- Returns `LoadedDoc(path, sha256, text, page_count)` — text extraction only, no chunking
-- `preprocess_text(text, source_ext)` — normalizes whitespace, removes page number artifacts,
-  de-hyphenates PDF line wraps, collapses repeated header/footer lines (freq ≥ 4),
-  drops standalone integers (slide numbers), drops Wingdings 'z' artifacts
-- `_is_spoken_math_transcript()` — detects and rejects audio transcript files with spoken math notation
-- Note: PDF text extraction is used for identity/metadata only; knowledge extraction uses vision
+### Main Launcher
 
-### `ingest.py`
-- `extract_knowledge_chunks(doc, cfg, ...)` — routes to vision or text based on file extension
-  and LLM_PROVIDER; returns list of knowledge chunk strings
-- `_extract_vision_lmstudio()` — renders PDF pages to base64 PNG, sends in batches of
-  `vision_pages_per_batch` (default 4) to LM Studio vision endpoint
-- `_extract_vision_anthropic()` — sends raw PDF bytes as native document block (one API call)
-- `_split_knowledge_output()` — splits context model output (blank-line separated paragraphs)
-  into individual chunks, merges short fragments, hard-splits overlong chunks
-- `ingest_domain(cfg, prompts_dir)` — full ingest loop with batch embedding and upsert
+`_run_testGen.bat` and `_run_testGen.sh` are thin shims into `_rag_testGen/interactive_run.py`.
 
-### `llm_client.py`
-- `call_llm(lm_url, model, system_prompt, user_prompt, ...)` — text-only call, all providers
-- `call_llm_vision(lm_url, model, system_prompt, user_prompt, image_b64_list, pdf_path, ...)` —
-  vision call; provider determines format:
-  - lmstudio/openai/gemini: `image_url` blocks with base64 PNG data
-  - anthropic: `document` block with raw PDF bytes (native PDF support, no rendering)
-- `render_pdf_pages_b64(pdf_path, dpi)` — renders PDF pages to base64 PNG list (MuPDF warnings suppressed)
-- `pdf_to_b64(pdf_path)` — raw PDF bytes as base64 (for Anthropic native PDF)
-- All calls log to the secrets-backed `runs/logs_RUNID/llm_http.jsonl` (provider, model, mode, elapsed_ms, token counts)
-- `LLM_API_KEY` read from env only, never logged or written to config
+`interactive_run.py` is the primary operator surface. It:
+- loads and saves persisted config
+- prompts for run mode
+- prepares run folders
+- passes env vars to `cli.py`
+- captures logs
+- optionally runs analytics
 
-### `embed_lmstudio.py`
-- `embed_texts(cfg, texts)` — calls LM Studio `/v1/embeddings`
-- Embeddings remain local regardless of LLM_PROVIDER setting
+Current launcher menu:
+- `B`: batch generate + analytics
+- `P`: pipeline ingest + generate
+- `F`: full ingest + generate + analytics
+- `I`: ingest only
+- `G`: generate only
+- `A`: analytics on most recent run
+- `Q`: SQL-style corpus exploration against the pgvector DB
+- `M`: multi-domain pipeline runner
 
-### `pipeline.py`
-- Three human-in-the-loop checkpoints (all optional, controlled by config flags):
-  - `_checkpoint_chunks()` — after ingest, review/edit/skip knowledge chunks before embedding
-  - `_checkpoint_items()` — after generation, review/edit/skip items before reviewer
-  - `_checkpoint_review()` — after review, override/correct flagged items
-- `generate_from_db(cfg)` — RAG mode: retrieves top-k chunks, generates + reviews MCQ items
-- `generate_baseline(cfg)` — baseline mode: loads docs directly, generates without pgvector
-- `run_pipeline(cfg)` — orchestrates ingest + generate
-- `write_run_xlsx()` — writes multi-sheet XLSX:
-  Run Metadata, DB Snapshot, Chunk Preview, Items, Reviewer Decisions, Traceability, Quality Metrics
-- Note: old context-rewrite-at-query-time agent removed; context model now runs at ingest time
+### CLI Dispatcher
 
-### `config.py`
-- `load_config_from_env()` — reads all settings from environment variables
-- `ResolvedConfig` — frozen dataclass; `.with_overrides()` for CLI arg application
-- Supports backward-compatible alias `SME_MODEL` → `GENERATOR_MODEL`
-- New fields: `llm_provider`, `context_model`, `baseline_mode`, `checkpoint_chunks`,
-  `checkpoint_items`, `checkpoint_review`
+`_rag_testGen/cli.py` dispatches to:
+- `ingest`
+- `generate`
+- `baseline`
+- `pipeline`
 
-### `db_pgvector.py`
-- Schema: `rag_chunks` (doc_path, doc_sha256, chunk_index, chunk_text, embedding vector(N), meta jsonb)
-- Schema: `rag_meta` (k, v — stores embed_model, embedding_dim, source_root, context_model)
-- `similarity_search()` — cosine distance via pgvector `<->` operator
-- `get_db_snapshot_summary()` / `get_db_snapshot_per_doc()` — for XLSX DB Snapshot sheet
+This is the stable programmatic entrypoint for automation.
 
 ---
 
-## Configuration (`config.env`)
+## Core Flow
 
-Plain `KEY=VALUE` file, no shell syntax. Written by `interactive_run.py` to
-`C:\Users\kadek\secrets\domainRag\config.env` by default, or to the path in
-`DOMAINRAG_CONFIG_ENV` if set. `_rag_testGen/config.env.example` is the tracked
-template. `LLM_API_KEY` is never written here — entered at runtime via masked
-prompt, stored only in process environment.
+```text
+interactive_run.py
+  -> cli.py
+     -> pipeline / generate / ingest / baseline
 
-```
-RAG_ROOT=C:\path\to\domainRag\_rag_testGen
-DOMAIN_DIR=C:\path\to\your\corpus
-N_ITEMS=1
-DB_DSN=postgresql://username:password@localhost:5435/your_database
-DOCKER_CONTAINER=pgvector17
-LM_URL=http://localhost:1234
-EMBED_MODEL=text-embedding-nomic-embed-text-v1.5@q8_0
-CONTEXT_MODEL=qwen/qwen2.5-vl-7b-instruct
-GENERATOR_MODEL=qwen2.5-7b-instruct-uncensored
-REVIEW_MODEL=qwen2.5-7b-instruct-uncensored
-API_PROVIDER=
-API_MODEL=
-INGEST_PROVIDER=local
-GENERATE_PROVIDER=local
-REVIEW_PROVIDER=local
-LMSTUDIO_LOGPATH=C:\Users\kadek\AppData\Roaming\LM Studio\logs\main.log
-CHECKPOINT_CHUNKS=true
-CHECKPOINT_ITEMS=true
-CHECKPOINT_REVIEW=true
+pipeline
+  -> ingest.py
+     -> loaders.py
+     -> llm_client.py
+     -> embed_lmstudio.py
+     -> db_pgvector.py
+  -> pipeline.py generation path
+     -> db_pgvector.py retrieval
+     -> llm_client.py generator
+     -> llm_client.py reviewer
+  -> write_run_xlsx()
 ```
 
-Mac equivalent paths use `/Users/username/...` and `~/Library/Logs/LM Studio/main.log`.
-The DB requires manual creation:
-`docker exec -it pgvector17 psql -U postgres -c "CREATE DATABASE kinaxis_ragtestdb;"`
+High-level behavior:
+- PDFs use vision-style extraction
+- PPTX/DOCX/TXT use text extraction
+- embeddings always come from LM Studio
+- retrieval comes from pgvector
+- generation and review can each route to local or API
 
 ---
 
-## Hardware Constraint — PDF Vision Ingest
+## Module Roles
 
-The operator machine has a GTX 1650 (4GB VRAM). The `qwen2.5-vl-7b` vision model requires
-~8GB VRAM and runs on CPU on this hardware. PDF page image encoding takes ~2 minutes per
-4-page batch on CPU, making local vision ingest of large PDF corpora impractical (~12 hours
-for 230 pages).
+### `_rag_testGen/config.py`
 
-**Current recommended approach:**
-- PDFs: route to Anthropic API (`LLM_PROVIDER=anthropic`) — native PDF support, no rendering,
-  fast and accurate math extraction, pennies per document
-- PPTX/DOCX/TXT: run locally via LM Studio text model (fast, no vision needed)
-- A `PDF_PROVIDER` override config key to split providers by file type is a planned improvement
+Loads environment variables into `ResolvedConfig`.
+
+Important behavior:
+- config is environment-driven
+- local lane and API lane are separate
+- routing is per step: ingest, generate, review
+- embeddings remain local regardless of provider routing
+
+### `_rag_testGen/interactive_run.py`
+
+Interactive operator launcher.
+
+Important behavior:
+- persisted config defaults to `C:\Users\kadek\secrets\domainRag\config.env`
+- default run root is `C:\Users\kadek\secrets\domainRag\runs`
+- per-run folder is `runs\logs_<RUN_ID>\`
+- `OUT_DIR` is pointed at the same run folder so XLSX, manifest, logs, and console output stay together
+
+### `_rag_testGen/ingest.py`
+
+Owns corpus ingestion.
+
+Important behavior:
+- extracts knowledge chunks
+- uses vision for PDFs
+- uses text-mode extraction for PPTX/DOCX/TXT
+- writes chunks into pgvector
+- supports `clear_first`
+
+### `_rag_testGen/loaders.py`
+
+Owns raw document loading and preprocessing.
+
+Supported types:
+- PDF
+- PPTX
+- DOCX
+- TXT / MD
+- MP4 sidecar transcript workflow is also present
+
+### `_rag_testGen/pipeline.py`
+
+Owns generation, review, checkpoints, and XLSX output.
+
+Primary functions:
+- `generate_from_db()`
+- `generate_baseline()`
+- `run_pipeline()`
+- `write_run_xlsx()`
+
+Checkpoint stages:
+- chunk review
+- item review
+- reviewer-flag review
+
+### `_rag_testGen/db_pgvector.py`
+
+Owns all Postgres access.
+
+This repo does not use an ORM.
+
+### `_rag_testGen/llm_client.py`
+
+Unified LLM client across:
+- LM Studio
+- Anthropic
+- OpenAI
+- Gemini
+
+### `analytics/analyticsVizs.py`
+
+Current chart renderer for:
+- one 3-run batch directory
+- merged comparison workbook
+- Claude review decision JSON
+
+This file was historically the messiest surface because it accumulated one-off study assumptions.
+Current expectation: it should stay generic and derive conditions from the provided data, not from hardcoded historic batch names.
+
+### `analytics/run_batches.py`
+
+Unattended comparative-study runner.
+
+Current behavior:
+- reads persisted config from secrets path
+- writes runs into secrets-backed run folders first
+- archives completed runs into `analytics/`
+- invokes `analyticsVizs.py`
+- invokes `merge_runs.py` at the end
+
+### `analytics/merge_runs.py`
+
+Builds a merged master workbook from archived batch folders.
+
+### `analytics/aigenticHumanReview.py`
+
+Exports items for human/Claude review and writes review decisions back into a workbook.
 
 ---
 
-## Session 15 Plan — Comparative Batch Study + Claude Human Review
+## Configuration
 
-### Research Design
+Persisted config path:
+- `C:\Users\kadek\secrets\domainRag\config.env`
 
-4 conditions × 3 difficulties × 50 items = **600 total items** across all batches.
+Override path:
+- `DOMAINRAG_CONFIG_ENV`
 
-| Batch | Label | Generate | Review | Status |
-|-------|-------|----------|--------|--------|
-| A | `3-16-26` | local Qwen 7B | local Qwen 7B | DONE — `analytics/3-16-26/` |
-| B | `haiku-reviewer` | local Qwen 7B | Claude Haiku API | in progress |
-| C | `haiku-generator` | Claude Haiku API | local Qwen 7B | pending |
-| D | `haiku-both` | Claude Haiku API | Claude Haiku API | pending |
+Tracked template:
+- `_rag_testGen/config.env.example`
 
-Each batch = easy + medium + hard × 50 items (9 total runs per session after batch A).
-Checkpoints: all OFF (`CHECKPOINT_CHUNKS=false`, `CHECKPOINT_ITEMS=false`, `CHECKPOINT_REVIEW=false`) for unattended runs.
+Secrets rule:
+- `LLM_API_KEY` is never written to the persisted config file
 
-### Config per Batch
+Common keys:
 
-**Batch B (haiku-reviewer)** — current config.env state:
+```text
+RAG_ROOT
+DOMAIN_DIR
+N_ITEMS
+DB_DSN
+DOCKER_CONTAINER
+LM_URL
+EMBED_MODEL
+CONTEXT_MODEL
+GENERATOR_MODEL
+REVIEW_MODEL
+API_PROVIDER
+API_MODEL
+INGEST_PROVIDER
+GENERATE_PROVIDER
+REVIEW_PROVIDER
+DIFFICULTY_TARGET
+LMSTUDIO_LOGPATH
+CHECKPOINT_CHUNKS
+CHECKPOINT_ITEMS
+CHECKPOINT_REVIEW
 ```
-GENERATE_PROVIDER=local
-REVIEW_PROVIDER=api
-API_PROVIDER=anthropic
-API_MODEL=claude-haiku-4-5-20251001
+
+Important routing rules:
+- `INGEST_PROVIDER=local|api`
+- `GENERATE_PROVIDER=local|api`
+- `REVIEW_PROVIDER=local|api`
+
+Important runtime variables:
+- `RUN_ID`
+- `LOG_DIR`
+- `OUT_DIR`
+- `TOP_K`
+- `CONDITION_LABEL`
+- `MAX_CONTEXT_CHARS_GEN`
+- `MAX_CONTEXT_CHARS_REV`
+
+---
+
+## Storage And Outputs
+
+Default run root:
+- `C:\Users\kadek\secrets\domainRag\runs`
+
+Default per-run folder:
+- `C:\Users\kadek\secrets\domainRag\runs\logs_<RUN_ID>\`
+
+Expected run artifacts:
+- `run_<RUN_ID>.xlsx`
+- `run_manifest_<RUN_ID>.json`
+- `run_info.txt`
+- `console_pipeline.txt` or `console_generate.txt`
+- `llm_http.jsonl`
+- `lmstudio.log`
+- `docker_<container>.log`
+
+XLSX sheets can include:
+- Run Metadata
+- DB Snapshot
+- Chunk Preview
+- Items
+- Reviewer Decisions
+- Traceability
+- Quality Metrics
+
+---
+
+## Database
+
+Database engine:
+- PostgreSQL 17 with pgvector
+
+Expected local container:
+- `pgvector17`
+
+Typical port:
+- `5435`
+
+Manual bootstrap example:
+
+```powershell
+docker run --name pgvector17 --restart unless-stopped -e POSTGRES_PASSWORD=postgres -p 5435:5432 -d pgvector/pgvector:pg17
+docker exec -it pgvector17 psql -U postgres -c "CREATE DATABASE kinaxis_ragtestdb;"
 ```
 
-**Batch C (haiku-generator):**
+The repo expects direct `psycopg.connect(dsn)` usage.
+
+---
+
+## Analytics Workflow
+
+### Single Run Folder
+
+Use:
+
+```powershell
+python analytics\analyticsVizs.py "C:\path\to\logs_YYYYMMDD_HHMMSSZ"
 ```
-GENERATE_PROVIDER=api
-REVIEW_PROVIDER=local
+
+This expects one batch folder containing three `run_*.xlsx` files representing:
+- easy
+- medium
+- hard
+
+### Unattended Multi-Condition Study
+
+Use:
+
+```powershell
+python analytics\run_batches.py
 ```
 
-**Batch D (haiku-both):**
+Expected pattern:
+- run batch condition
+- archive generated run folders into `analytics\...`
+- render charts for each batch
+- merge all batches
+- render merged charts
+
+### Merge Archived Batches
+
+Use:
+
+```powershell
+python analytics\merge_runs.py
 ```
-GENERATE_PROVIDER=api
-REVIEW_PROVIDER=api
+
+### Claude / Human Review
+
+Use:
+
+```powershell
+python analytics\aigenticHumanReview.py --export
+python analytics\aigenticHumanReview.py --status
+python analytics\aigenticHumanReview.py --require-complete
+python analytics\aigenticHumanReview.py --write
+python analytics\analyticsVizs.py --claude-review "<path-to-decisions-json>"
 ```
 
-### Per-Batch Workflow
+Claude / human review is a required stage before final analytics sign-off.
 
-1. Run easy (DIFFICULTY_TARGET=easy), then medium, then hard in sequence
-2. Move completed runs folder to `analytics/[batch-label]/` (e.g. `analytics/haiku-reviewer/`)
-3. Run `viz.py [batch-dir]` to generate that batch's snapshot charts + dashboard
-4. Commit `analytics/[batch-label]/` to git
+### Analytics Expectations
 
-### Post-All-Batches Workflow
+`analyticsVizs.py` should remain:
+- data-driven
+- batch-name agnostic where possible
+- able to render from current workbook schema
 
-1. Run merge script (`analytics/merge_runs.py`) — combines all 4 batches' XLSX Items +
-   Reviewer Decisions + Traceability + Quality Metrics into `analytics/merged_master.xlsx`
-   with a `batch_label` column added to each row
-2. Run `viz.py --merged analytics/merged_master.xlsx` — multi-condition comparison charts
-3. Claude conducts "human review" (see below)
-
-### Claude Human Review
-
-Claude acts as the independent expert human reviewer. For each item across all batches:
-- Reads: question stem, answer choices, correct key, stated difficulty
-- Reads: source chunks from Traceability sheet (the actual retrieved context)
-- Scores each quality dimension:
-  - `source_alignment` (1-5): is the question answerable from the retrieved source material?
-  - `distractor_quality` (1-5): are wrong answers plausible but unambiguously wrong?
-  - `stem_clarity` (1-5): is the stem unambiguous, grammatically clean, no answer leaks?
-  - `difficulty_match` (True/False): does stated difficulty match cognitive demand?
-- Issues ACCEPT / REVISE / REJECT decision with written reasoning
-- Output: new "Claude Review" sheet added to each run XLSX and to merged_master.xlsx
-
-**Research value:** Claude review IS the human baseline for RQ2 (does agentic critique reduce
-human review burden?). Comparing Claude's decisions against Haiku reviewer (Batch B/D) tells
-us whether Haiku tracks human judgment. Comparing against local Qwen reviewer (Batch A/C)
-quantifies the noise cost of non-independent review.
-
-### viz.py — Required Extensions for Multi-Batch
-
-`analytics/viz.py` currently reads 3 fixed XLSX files (easy/medium/hard) from one runs dir.
-Extensions needed before or after merge:
-- `--merged` flag: accept merged_master.xlsx, group by `batch_label` for condition comparison
-- Additional charts: condition × quality metric, reviewer agreement rate vs Claude, cost comparison across all 4 conditions
-- Output to `analytics/[batch-label]/charts/` per batch, or `analytics/merged/` for cross-batch
+It should not rely on:
+- one hardcoded model family
+- one historical item count
+- one historical folder name
 
 ---
 
-## Session 14 Findings — Scale Runs + Reviewer Architecture
+## Local vs API Guidance
 
-### Scale Run Results (50 items each, local reviewer = qwen2.5-7b-uncensored)
+### Local-Only Safe Lane
 
-| Difficulty | Schema OK | Difficulty Match | Auto-Accept | REVISE/REJECT |
-|---|---|---|---|---|
-| Easy ×50 | 49/50 (98%) | 49/50 (98%) | 26 (52%) | 24 |
-| Medium ×50 | 50/50 (100%) | 50/50 (100%) | 20 (40%) | 30 |
-| Hard ×50 | 50/50 (100%) | 50/50 (100%) | 6 (12%) | 44 |
+Use local-only routing when corpus content must remain private:
+- `INGEST_PROVIDER=local`
+- `GENERATE_PROVIDER=local`
+- `REVIEW_PROVIDER=local`
 
-### Root Cause — Local Reviewer Unreliable
+### Mixed Lane
 
-qwen2.5-7b-uncensored reviewing its own output is not independent critique:
-- Same model generates AND reviews → not independent
-- Consistently flags `INCOMPLETE_CONTEXT` even for well-formed questions
-- Inconsistent: some ACCEPT decisions contain REVISE-sounding reason codes
-- Hard questions hit 12% accept — reviewer adds noise, not signal
+Useful when:
+- PDFs are large
+- local vision is too slow
+- review independence matters
 
-### Fix — Route REVIEW_PROVIDER=api
+Typical mixed pattern:
+- ingest via API for PDFs
+- generate locally
+- review via API
 
-`API_PROVIDER=anthropic`, `API_MODEL=claude-haiku-4-5-20251001` already configured.
-Setting `REVIEW_PROVIDER=api` routes reviewer to Claude Haiku (~$0.10-0.15 per 150 items).
-Generation stays local (free). Haiku reviewer will provide meaningful, independent assessment.
-**Next session: change REVIEW_PROVIDER=local → api, re-run scale batches.**
+### Hardware Constraint
 
-### Difficulty Control — Validation Findings (2026-03-16 session 14)
+This machine’s GTX 1650 class hardware is weak for sustained local PDF vision ingest.
 
-- `DIFFICULTY_TARGET` env var injected into `generator_user.txt` via `{{DIFFICULTY}}` placeholder
-- `TOP_K` and `MAX_CONTEXT_CHARS_GEN` are runtime-overridable via env/config.env
-- Hard questions: `TOP_K=12`, `MAX_CONTEXT_CHARS_GEN=6000` used for scale runs
-- Easy/medium: `TOP_K=6` (default), `MAX_CONTEXT_CHARS_GEN=3000` (default) — both PASS at 60% accept
-- Hard: consistently ~0-40% auto-accept. Root cause: model drifts toward implied relationships between chunks rather than staying on explicit text. This is a known model limitation (qwen2.5-7b). Reviewer correctly catches these. Expected human review burden for hard: ~60% of items flagged for checkpoint 3.
-- Assessor script: `assess_run.py` — auto-finds most recent XLSX, prints item/reviewer summary, PASS/FAIL verdict
+Operational consequence:
+- local PDF vision can be very slow
+- Anthropic native PDF ingest is often the practical route for non-sensitive corpora
 
 ---
 
-## Current Known State
+## Current Operational Assumptions
 
-- `interactive_run.py` implemented and working; BAT/SH are thin shims
-- `llm_client.py` replaces `lmstudio_client.py` — unified provider abstraction with vision support
-- Context model runs at ingest time (not query time); old context-rewrite-at-query-time agent removed
-- PDF ingest uses vision (rendered pages for lmstudio, native PDF for anthropic)
-- PPTX/DOCX/TXT ingest uses text extraction via context model
-- Three human-in-the-loop checkpoints implemented (chunks, items, review)
-- Baseline (no-RAG) mode implemented as `generate_baseline()` and `baseline` CLI subcommand
-- `chunking.py` is vestigial — character-based chunking replaced by context model output splitting
-- Vision page batching implemented (`vision_pages_per_batch=4`) to respect LM Studio context limits
-- LM Studio context window must be set to 32768+ for vision model to handle 4-page batches
-- MuPDF structural warnings suppressed via `fitz.TOOLS.mupdf_display_errors(False)`
-- XLSX output: Run Metadata, DB Snapshot, Chunk Preview, Items, Reviewer Decisions,
-  Traceability, Quality Metrics sheets
-- **58 chunks in DB** from prior ingest run (all 11 docs in example1, via Anthropic API) — confirmed 2026-03-16
-- persisted config now belongs under `C:\Users\kadek\secrets\domainRag\`; repo copy should remain example-only
-- Generator/reviewer output quality unvalidated end-to-end — first G mode run pending
+- Python 3.10+ is expected by the operator docs
+- LM Studio should be running on port `1234`
+- embeddings use LM Studio
+- run artifacts belong in secrets-backed storage, not repo-local folders
+- archived analytics bundles belong in `analytics/`
+- generated analytics images and merged study artifacts are reproducible outputs, not canonical source material
 
 ---
 
-## Still To Do — Priority Order
+## Known Weak Spots
 
-- `to-do`: Run a live Q-mode check against a loaded corpus after the current control-plane cleanup cycle.
-- `barrier`: Client corpora such as `agentFundamentals` must stay fully local for ingest, generation, and review; cloud providers are forbidden there.
-- `prompt-assist`: Keep competency tagging and merged-study tooling explicit because they are the next research-shaping changes after the batch comparison work settles.
-
-### IN PROGRESS: Comparative Batch Study (Session 15)
-
-See Session 15 Plan above. Batch A done. Batches B/C/D running overnight.
-- `REVIEW_PROVIDER=api` set in config.env — DONE
-- All checkpoints disabled for unattended runs — DONE
-- merge_runs.py not yet written — needed before Claude human review
-- viz.py multi-batch extensions not yet written — needed before merged viz
-
-### DONE: First G-Mode Scale Runs + REVIEW_PROVIDER Fix
-
-Easy/medium/hard ×50 completed 2026-03-16 (Batch A, local/local). Chunks OK, difficulty control working.
-Local reviewer unreliable — see Session 14 Findings. REVIEW_PROVIDER=api now set. Batch B running.
-
-### HIGH: Competency / Section Tagging
-
-Add `competency` and `source_section` fields to generator output schema, generator prompt, and XLSX Items sheet.
-This is the foundation for coverage tracking and distribution control.
-- Generator prompt: instruct model to tag each item with competency area drawn from context
-- `text_utils.py`: add fields to schema validation
-- `pipeline.py`: pass through to XLSX Items sheet
-
-### MEDIUM: Knowledge Coverage Tracking
-
-Ensure test items are distributed across logical sections of domain knowledge.
-Depends on: competency tagging.
-- Track which chunks have been used as retrieval seeds across items in a run
-- Add Coverage sheet to XLSX (competency × chunk_count × items_generated)
-- Flag under-represented competencies at checkpoint 2
-
-### MEDIUM: Difficulty Proportion Control
-
-Currently difficulty is declared by the generator but not controlled by the caller.
-- Add `DIFFICULTY_TARGET` config param (easy | medium | hard | any; default: any)
-- Inject target difficulty into generator_user.txt: "Generate a {difficulty} question…"
-- Add `DIFFICULTY_DISTRIBUTION` param (e.g. "30/50/20") for multi-item runs
-- Generation loop: rotate through difficulty targets to hit the requested distribution
-- Coverage sheet: add difficulty × competency breakdown
-
-### MEDIUM: Research Condition Comparison
-
-Multiple condition runs for RQ1/RQ2:
-- RAG + critic (current)
-- RAG + no critic
-- No-RAG + critic (baseline mode exists)
-- No-RAG + no critic
-Store `CONDITION_LABEL` in XLSX Run Metadata sheet for side-by-side analysis.
-
-### LOW: Question Format Variants
-
-Currently only standard 4-option MCQ (a/b/c/d). Planned variants:
-- **Select-N-of-M** (e.g. "select 2 of 5"): requires different prompt contract and XLSX schema
-- **Binned / categorization**: match concepts to categories; different prompt template entirely
-- **Fill-in-the-blank**: gap-fill items; different output contract
-Implementation: one prompt template file per format type; `FORMAT` config param; format-specific
-schema validator in `text_utils.py`. Each format is independent — add one at a time.
-Prerequisite: first run validated and competency tagging in place.
-
-### LOW: User / LLM Interaction Layer
-
-Currently completely absent — pipeline runs batch, no real-time dialogue.
-Required for Kinaxis deliverables. Likely a new run mode (`C = Chat / interactive`).
-Options: CLI REPL, minimal web UI (Flask/FastAPI), or structured chat loop.
-Scope TBD — design after all other features validated.
+- `analytics/analyticsVizs.py` has historically accreted one-off study logic
+- `DEVOPS.md` was previously polluted with session history and stale plans
+- archived analytics outputs are recoverable only if they still exist locally; the code is the durable asset, generated study outputs are not
+- study reproduction is straightforward, but exact historic outputs are not guaranteed unless the artifacts were preserved
 
 ---
 
-## Research Design Context
+## Rules For Editing
 
-**RQ1:** Does a dual-model agentic RAG architecture produce higher-quality MCQ items than
-single-model generation?
-- IV: generation approach (RAG+critic vs no-RAG, RAG+no-critic, no-RAG+no-critic)
-- DVs: source alignment, distractor quality, stem clarity, difficulty calibration scores
-
-**RQ2:** Can agentic critique meaningfully reduce human review burden?
-- Measured by: proportion of items requiring substantive human revision after critic pass
-
-**Quality dimensions:**
-- Source alignment (1-5): grounded in retrieved chunks?
-- Distractor quality (1-5): plausible but unambiguously wrong?
-- Stem clarity (1-5): unambiguous, grammatically correct, no clues?
-- Difficulty calibration (bool): stated difficulty matches cognitive demand?
+- Prefer minimal, coherent diffs
+- If a change spans many functions, replace the full file rather than leaving fragmented edits
+- Keep comments sparse and structural
+- Do not introduce framework-heavy abstractions
+- Do not add ORM layers
+- Do not auto-load LM Studio models from Python
+- Keep prompt files as full-text replacements when changing them
+- Preserve Python 3.9-compatible syntax if touching older modules that rely on that compatibility
 
 ---
 
-## Client Corpus — IP Protection (HARD RULE)
+## Hard Constraints
 
-NEVER read, list, glob, or inspect files inside the configured private corpus path,
-`_client_corpus/`, or `_private_corpus/`. Contents are client IP.
+### Secret Handling
 
-- All pipeline stages MUST be LOCAL: `INGEST_PROVIDER=local`, `GENERATE_PROVIDER=local`, `REVIEW_PROVIDER=local`
-- No client data to cloud APIs under any circumstances
-- You may read the persisted config file (holds path string) and run logs — not the corpus files themselves
+- Never write live secrets into the repo
+- Never persist `LLM_API_KEY` into tracked files
+
+### Client Corpus Protection
+
+Do not inspect private corpus contents under:
+- `_client_corpus/`
+- `_private_corpus/`
+
+If working against a private client corpus:
+- all stages must remain local
+- no cloud APIs
+
+### Source Of Truth
+
+The codebase is the source of truth for behavior.
+
+This file should describe:
+- what exists now
+- how to run it
+- what constraints matter
+- what an agent must preserve
+
+It should not function as a session diary.
 
 ---
 
-## Constraints and Conventions
+## Recovery Notes
 
-- Minimal diffs; full-file replacements preferred when changes are extensive
-- Do NOT auto-load LM Studio models from Python
-- Prompts do NOT control model selection — model is set in config
-- All DB access via `psycopg.connect(dsn)`, no ORM
-- Python files use dataclasses, psycopg3, openpyxl, requests — no heavy frameworks
-- No f-strings or type annotations with `|` syntax — must support Python 3.9 for compatibility
-- `LLM_API_KEY` must never appear in logs, XLSX output, or the persisted config file
-- When advising on code changes, always provide either:
-  (a) full function replacement from the `def` line to the final return/end of function, or
-  (b) full file replacement if changes span multiple functions or are extensive
-  Do NOT provide surgical line-level snippets or partial function bodies
-- When advising on prompt changes, provide full replacement text for the `.txt` file
+If generated study artifacts are missing:
+- recover code from git if possible
+- check `C:\Users\kadek\secrets\domainRag` for surviving run folders
+- if artifacts are gone, regenerate the study rather than trying to reverse-engineer the exact outputs from chart images
+
+Recommended regeneration order:
+1. validate config and paths
+2. run a small pilot batch
+3. run full study batches
+4. merge outputs
+5. regenerate dashboards
+
+---
+
+## Immediate Maintenance Targets
+
+- keep `analyticsVizs.py` generic
+- keep launcher paths aligned with secrets-backed storage
+- keep `README.txt` lightweight and operator-facing
+- keep this file architectural and operational, not historical
