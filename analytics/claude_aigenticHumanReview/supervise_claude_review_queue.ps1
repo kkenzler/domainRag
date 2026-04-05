@@ -11,8 +11,9 @@ param(
 $ErrorActionPreference = "Stop"
 
 $AnalyticsRoot = Split-Path -Parent $PSCommandPath
+$Workdir = Join-Path $AnalyticsRoot "claude_review_workdir"
 $InputJson = Join-Path (Split-Path -Parent $AnalyticsRoot) "review_input.json"
-$DecisionsJson = "C:\Users\kadek\secrets\domainRag\claude-review\claude-review-batching\claude_review_decisions.json"
+$DecisionsJson = Join-Path $Workdir "claude_review_decisions.json"
 $QueueRoot = "C:\Users\kadek\source\.cogark\agent_infra\agent_sync\queues\claude"
 $Inbox = Join-Path $QueueRoot "inbox"
 $StatePath = Join-Path $QueueRoot "state.json"

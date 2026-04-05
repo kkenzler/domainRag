@@ -12,9 +12,9 @@ review lane.
 ## Canonical Paths
 
 - Review input:
-  `C:\Users\kadek\secrets\domainRag\claude-review\claude-review-batching\claude_review_input.json`
+  `C:\Users\kadek\source\repos\domainRag\analytics\claude_aigenticHumanReview\claude_review_workdir\claude_review_input.json`
 - Review decisions:
-  `C:\Users\kadek\secrets\domainRag\claude-review\claude-review-batching\claude_review_decisions.json`
+  `C:\Users\kadek\source\repos\domainRag\analytics\claude_aigenticHumanReview\claude_review_workdir\claude_review_decisions.json`
 
 ---
 
@@ -34,7 +34,8 @@ Compatibility wrappers also exist at the analytics root:
 
 ## Boundary
 
-- Claude keeps using the canonical external review directory.
+- Claude now uses the repo-local review workdir under
+  `analytics\claude_aigenticHumanReview\claude_review_workdir\`.
 - Shared exported review input now lives at
   `C:\Users\kadek\source\repos\domainRag\analytics\review_input.json`.
 - Codex local manual review lives under

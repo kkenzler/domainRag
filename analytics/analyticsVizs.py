@@ -3,7 +3,7 @@ domainRag Run Quality + Cost Dashboard
 ======================================
 Per-batch mode:
     python analyticsVizs.py <runs_dir>
-    python analyticsVizs.py           # default: ~/secrets/domainRag/runs
+    python analyticsVizs.py           # default: analytics/runs
 
 Merged mode:
     python analyticsVizs.py --merged <merged_master.xlsx>
@@ -18,27 +18,15 @@ Codex review mode:
 from __future__ import annotations
 
 import argparse
-import importlib.util
+import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent / "claude_aigenticHumanReview"))
-sys.path.insert(0, str(Path(__file__).parent / "codex_aigenticHumanReview"))
+_MPLCONFIGDIR = Path(__file__).parent / ".mplconfig"
+_MPLCONFIGDIR.mkdir(exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(_MPLCONFIGDIR))
 
-
-def _load_review_paths(subdir: str, alias: str):
-    spec = importlib.util.spec_from_file_location(
-        alias, Path(__file__).parent / subdir / "review_paths.py"
-    )
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-_claude_rp = _load_review_paths("claude_aigenticHumanReview", "claude_review_paths")
-_codex_rp = _load_review_paths("codex_aigenticHumanReview", "codex_review_paths")
-
-from viz_render import run_batch_mode, run_claude_review_mode, run_codex_review_mode, run_merged_mode
+from viz_render import run_batch_mode, run_claude_review_mode, run_codex_review_mode, run_merged_mode, run_review_analysis_mode
 
 
 def main():
@@ -47,17 +35,24 @@ def main():
     parser.add_argument("--merged", metavar="MASTER_XLSX", help="Path to merged_master.xlsx (merged mode)")
     parser.add_argument("--claude-review", metavar="DECISIONS_JSON", help="Path to claude_review_decisions.json (Claude Review mode)")
     parser.add_argument("--codex-review", metavar="DECISIONS_JSON", help="Path to codex_review_decisions.json (Codex Review mode)")
+    parser.add_argument("--review-analysis", metavar="ANALYSIS_DIR", help="Path to merged review_analysis export directory")
     args = parser.parse_args()
 
     script_dir = Path(__file__).parent
+    review_chart_dir = script_dir / "merged" / "review_analysis" / "charts"
 
-    if args.codex_review:
+    if args.review_analysis:
+        analysis_dir = Path(args.review_analysis)
+        run_review_analysis_mode(analysis_dir, analysis_dir / "charts")
+    elif args.codex_review:
         decisions = Path(args.codex_review)
-        out_dir = _codex_rp.review_output_root()
+        override = (os.environ.get("DOMAINRAG_REVIEW_DIR") or "").strip()
+        out_dir = Path(override).expanduser().resolve() if override else review_chart_dir
         run_codex_review_mode(decisions, out_dir)
     elif args.claude_review:
         decisions = Path(args.claude_review)
-        out_dir = _claude_rp.review_output_root()
+        override = (os.environ.get("DOMAINRAG_REVIEW_DIR") or "").strip()
+        out_dir = Path(override).expanduser().resolve() if override else review_chart_dir
         run_claude_review_mode(decisions, out_dir)
     elif args.merged:
         master = Path(args.merged)
@@ -68,9 +63,9 @@ def main():
         if args.runs_dir:
             runs_dir = Path(args.runs_dir)
         else:
-            runs_dir = Path.home() / "secrets" / "domainRag" / "runs"
+            runs_dir = script_dir / "runs"
         runs_dir = runs_dir.resolve()
-        out_dir = runs_dir.parent if runs_dir.parent != script_dir else script_dir
+        out_dir = runs_dir
         run_batch_mode(runs_dir, out_dir)
 
 

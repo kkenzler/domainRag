@@ -10,9 +10,11 @@ Batch conditions:
   D  [MODEL]-both       generate=api     review=api
 
 Set MODEL (below) to switch the API model for a new study run.
-Output lands in analytics/[MODEL]Permutations/.
+Output lands in:
+  analytics/example1_local-local/
+  analytics/example1_[MODEL]Permutations/
 
-After each batch:  moves runs → analytics/[MODEL]Permutations/<label>/  →  viz snapshot
+After each batch:  moves runs → study archive folder  →  viz snapshot
 After all batches: merge_runs.py
 
 Usage (from repo root or analytics/):
@@ -36,7 +38,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent          # analytics/
 REPO_DIR   = SCRIPT_DIR.parent                        # domainRag/
 RAG_DIR    = REPO_DIR / "_rag_testGen"                # domainRag/_rag_testGen/
-RUNS_DIR   = Path.home() / "secrets" / "domainRag" / "runs"
+RUNS_DIR   = SCRIPT_DIR / "runs"
 CONFIG_ENV = Path(
     os.environ.get("DOMAINRAG_CONFIG_ENV", str(Path.home() / "secrets" / "domainRag" / "config.env"))
 )
@@ -189,6 +191,7 @@ def _write_run_info(path: Path, cfg: dict, run_id: str, extra: dict = None) -> N
 def run_one(cfg: dict, batch_label: str, difficulty: str, top_k: str) -> dict:
     """Run cli.py generate for one difficulty. Returns info dict."""
     run_id  = _utc_now()
+    RUNS_DIR.mkdir(parents=True, exist_ok=True)
     log_dir = RUNS_DIR / f"logs_{run_id}"
     log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -242,11 +245,11 @@ def _batch_dest(batch_label: str, corpus: str) -> Path:
     """Returns the archive folder for a batch run.
 
     local-local  → analytics/{corpus}_local-local/
-    model-*      → analytics/[MODEL]Permutations/{corpus}_{batch_label}/
+    model-*      → analytics/{corpus}_{MODEL}Permutations/{corpus}_{batch_label}/
     """
     if batch_label == "local-local":
         return SCRIPT_DIR / f"{corpus}_local-local"
-    model_dir = SCRIPT_DIR / f"{MODEL}Permutations"
+    model_dir = SCRIPT_DIR / f"{corpus}_{MODEL}Permutations"
     model_dir.mkdir(exist_ok=True)
     return model_dir / f"{corpus}_{batch_label}"
 
@@ -302,7 +305,7 @@ def post_all() -> None:
 
     print("\n[post-all] Committing merged master")
     subprocess.run(["git", "add", "analytics/merged_master.xlsx",
-                    f"analytics/{MODEL}Permutations/"], cwd=str(REPO_DIR))
+                    f"analytics/example1_{MODEL}Permutations/"], cwd=str(REPO_DIR))
     subprocess.run([
         "git", "commit", "-m",
         "add merged_master.xlsx and merged viz across all 4 conditions\n\nCo-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>",

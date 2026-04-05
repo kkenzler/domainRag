@@ -1,6 +1,13 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 import matplotlib
+
+_MPLCONFIGDIR = Path(__file__).resolve().parent / ".mplconfig"
+_MPLCONFIGDIR.mkdir(exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(_MPLCONFIGDIR))
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt

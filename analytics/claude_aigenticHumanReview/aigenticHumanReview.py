@@ -22,6 +22,7 @@ import os
 import re
 import sys
 import time
+from collections.abc import Iterable
 from pathlib import Path
 
 import openpyxl
@@ -344,6 +345,76 @@ def export_items() -> None:
     print(f"Exported {count} items to {INPUT_JSON}")
 
 
+def _load_input_rows() -> list[dict]:
+    if not INPUT_JSON.exists():
+        return []
+    with open(INPUT_JSON, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    return data if isinstance(data, list) else []
+
+
+def _enrich_decisions_with_input(decisions: Iterable[dict]) -> list[dict]:
+    source_rows = _load_input_rows()
+    source_map = {(row.get("run_id"), row.get("item_id")): row for row in source_rows}
+    decision_map = {(row.get("run_id"), row.get("item_id")): row for row in decisions}
+
+    enriched: list[dict] = []
+    seen: set[tuple[str | None, str | None]] = set()
+
+    def _merge(source_row: dict | None, decision_row: dict) -> dict:
+        merged = dict(source_row or {})
+        for key, value in decision_row.items():
+            if value is not None or key not in merged:
+                merged[key] = value
+        return merged
+
+    for source_row in source_rows:
+        key = (source_row.get("run_id"), source_row.get("item_id"))
+        decision_row = decision_map.get(key)
+        if decision_row is None:
+            continue
+        enriched.append(_merge(source_row, decision_row))
+        seen.add(key)
+
+    for decision_row in decisions:
+        key = (decision_row.get("run_id"), decision_row.get("item_id"))
+        if key in seen:
+            continue
+        enriched.append(_merge(source_map.get(key), decision_row))
+
+    return enriched
+
+
+def _load_decisions(enrich_with_input: bool = True) -> list[dict]:
+    if not DECISIONS_JSON.exists():
+        return []
+    with open(DECISIONS_JSON, "r", encoding="utf-8") as f:
+        decisions = json.load(f)
+    if enrich_with_input:
+        decisions = _enrich_decisions_with_input(decisions)
+    return decisions
+
+
+def repair_metadata() -> None:
+    if not DECISIONS_JSON.exists():
+        raise SystemExit(f"{DECISIONS_JSON} not found. Nothing to repair.")
+
+    with open(DECISIONS_JSON, "r", encoding="utf-8") as f:
+        original = json.load(f)
+    repaired = _enrich_decisions_with_input(original)
+
+    if repaired == original:
+        print("Claude decisions already contain full input metadata. No repair needed.")
+        return
+
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    backup = DECISIONS_JSON.with_name(f"{DECISIONS_JSON.stem}.pre_repair_{timestamp}{DECISIONS_JSON.suffix}")
+    backup.write_text(json.dumps(original, indent=2, ensure_ascii=False), encoding="utf-8")
+    DECISIONS_JSON.write_text(json.dumps(repaired, indent=2, ensure_ascii=False), encoding="utf-8")
+    print(f"Backed up original decisions to {backup}")
+    print(f"Repaired {DECISIONS_JSON} using metadata from {INPUT_JSON}")
+
+
 def score_items(limit: int | None, model: str | None, timeout: int, provider_override: str | None = None) -> None:
     if not INPUT_JSON.exists():
         raise SystemExit(f"{INPUT_JSON} not found. Run --export first.")
@@ -351,10 +422,7 @@ def score_items(limit: int | None, model: str | None, timeout: int, provider_ove
     with open(INPUT_JSON, "r", encoding="utf-8") as f:
         items = json.load(f)
 
-    existing: list[dict] = []
-    if DECISIONS_JSON.exists():
-        with open(DECISIONS_JSON, "r", encoding="utf-8") as f:
-            existing = json.load(f)
+    existing = _load_decisions(enrich_with_input=False)
     existing_map = {(d["run_id"], d["item_id"]): d for d in existing}
 
     pending = [item for item in items if (item["run_id"], item["item_id"]) not in existing_map]
@@ -390,7 +458,7 @@ def score_items(limit: int | None, model: str | None, timeout: int, provider_ove
         }
         existing_map[(decision["run_id"], decision["item_id"])] = decision
         with open(DECISIONS_JSON, "w", encoding="utf-8") as f:
-            json.dump(list(existing_map.values()), f, indent=2, ensure_ascii=False)
+            json.dump(_enrich_decisions_with_input(existing_map.values()), f, indent=2, ensure_ascii=False)
         print(
             f"  [{idx}/{len(pending)}] "
             f"{decision['condition']} {decision['difficulty']} "
@@ -415,8 +483,7 @@ def write_review_sheet() -> None:
         print(f"ERROR: {DECISIONS_JSON} not found. Score items first.", file=sys.stderr)
         sys.exit(1)
 
-    with open(DECISIONS_JSON, "r", encoding="utf-8") as f:
-        decisions = json.load(f)
+    decisions = _load_decisions(enrich_with_input=True)
 
     print(f"Loaded {len(decisions)} decisions from {DECISIONS_JSON}")
 
@@ -465,10 +532,7 @@ def append_batch(batch_json_path: str) -> None:
     with open(batch_json_path, "r", encoding="utf-8") as f:
         new_decisions = json.load(f)
 
-    existing = []
-    if DECISIONS_JSON.exists():
-        with open(DECISIONS_JSON, "r", encoding="utf-8") as f:
-            existing = json.load(f)
+    existing = _load_decisions(enrich_with_input=False)
 
     existing_map = {(d["run_id"], d["item_id"]): d for d in existing}
     for decision in new_decisions:
@@ -476,7 +540,7 @@ def append_batch(batch_json_path: str) -> None:
 
     DECISIONS_JSON.parent.mkdir(parents=True, exist_ok=True)
     with open(DECISIONS_JSON, "w", encoding="utf-8") as f:
-        json.dump(list(existing_map.values()), f, indent=2, ensure_ascii=False)
+        json.dump(_enrich_decisions_with_input(existing_map.values()), f, indent=2, ensure_ascii=False)
 
     total = None
     if INPUT_JSON.exists():
@@ -509,6 +573,7 @@ def main() -> None:
     group.add_argument("--score-opus", action="store_true", help="Force API-lane scoring for pending review items")
     group.add_argument("--score-local", action="store_true", help="Force local LM Studio scoring for pending review items")
     group.add_argument("--write", action="store_true", help="Write decisions JSON to Claude Review sheet")
+    group.add_argument("--repair-metadata", action="store_true", help="Backfill missing review metadata from claude_review_input.json")
     group.add_argument("--status", action="store_true", help="Show scoring progress")
     group.add_argument("--append-batch", metavar="BATCH_JSON", help="Append a batch decisions JSON file to main decisions")
     group.add_argument("--require-complete", action="store_true", help="Exit non-zero unless all exported items have review decisions")
@@ -527,6 +592,8 @@ def main() -> None:
         score_with_local(args.limit, args.model, args.timeout)
     elif args.write:
         write_review_sheet()
+    elif args.repair_metadata:
+        repair_metadata()
     elif args.status:
         show_status()
     elif args.append_batch:

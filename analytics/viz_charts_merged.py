@@ -16,7 +16,7 @@ def _na_bar(ax, x, width, label="N/A\n(no reviewer)") -> None:
 
 
 def merged_accept_bar(ax, agg):
-    style_ax(ax, "Accept Rate by Condition (all difficulties)", "Accept %")
+    style_ax(ax, "Accept Rate by Generation Condition", "Accept %")
     conds = [g["condition"] for g in agg]
     colors = condition_color_map(conds)
     for i, g in enumerate(agg):
@@ -34,7 +34,7 @@ def merged_accept_bar(ax, agg):
 
 
 def merged_decisions(ax, agg):
-    style_ax(ax, "Reviewer Decisions by Condition", "Item Count")
+    style_ax(ax, "Reviewer Decisions by Generation Condition", "Item Count")
     conds = [g["condition"] for g in agg]
     labels = [condition_label(c) for c in conds]
     bottoms = np.zeros(len(agg))
@@ -61,9 +61,9 @@ def merged_decisions(ax, agg):
 
 def merged_accept_heatmap(ax, groups):
     ax.set_facecolor(AXIS_BG)
-    ax.set_title("Accept Rate %  (condition x difficulty)", color=TITLE_COL, fontsize=11, fontweight="bold", pad=8)
+    ax.set_title("Accept Rate %  (generation condition x difficulty)", color=TITLE_COL, fontsize=11, fontweight="bold", pad=8)
     diffs = ["easy", "medium", "hard"]
-    conds = ordered_conditions([g["condition"] for g in groups])
+    conds = ordered_conditions({g["condition"] for g in groups})
     # Build a set of no-reviewer conditions for cell annotation
     no_rev_conds = {
         g["condition"] for g in groups if not g.get("has_reviewer_metrics", True)
@@ -98,7 +98,7 @@ def merged_accept_heatmap(ax, groups):
 
 
 def merged_quality_bar(ax, agg):
-    style_ax(ax, "Mean Quality Scores by Condition", "Score (1-5)")
+    style_ax(ax, "Mean Quality Scores by Generation Condition", "Score (1-5)")
     metrics = ["mean_source_alignment", "mean_distractor_quality", "mean_stem_clarity"]
     m_labels = ["Source\nAlignment", "Distractor\nQuality", "Stem\nClarity"]
     x = np.arange(len(metrics))
@@ -123,7 +123,7 @@ def merged_quality_bar(ax, agg):
 
 def merged_score_heatmap(ax, agg):
     ax.set_facecolor(AXIS_BG)
-    ax.set_title("Mean Score Heatmap  (condition x metric)", color=TITLE_COL, fontsize=11, fontweight="bold", pad=8)
+    ax.set_title("Mean Score Heatmap  (generation condition x metric)", color=TITLE_COL, fontsize=11, fontweight="bold", pad=8)
     metrics = ["mean_source_alignment", "mean_distractor_quality", "mean_stem_clarity"]
     m_labels = ["Source\nAlignment", "Distractor\nQuality", "Stem\nClarity"]
     conds = [g["condition"] for g in agg]
@@ -157,7 +157,7 @@ def merged_score_heatmap(ax, agg):
 
 def merged_radar(ax, agg):
     ax.set_facecolor(AXIS_BG)
-    ax.set_title("Quality Radar by Condition", color=TITLE_COL, fontsize=11, fontweight="bold", pad=18)
+    ax.set_title("Quality Radar by Generation Condition", color=TITLE_COL, fontsize=11, fontweight="bold", pad=18)
     radar = [
         ("mean_source_alignment", "Src Align"),
         ("mean_distractor_quality", "Distractor"),
@@ -194,10 +194,10 @@ def merged_radar(ax, agg):
 
 
 def merged_trend(ax, groups):
-    style_ax(ax, "Accept Rate Trend: Easy -> Medium -> Hard", "Accept %")
+    style_ax(ax, "Generation Condition Trend: Easy -> Medium -> Hard", "Accept %")
     diffs = ["easy", "medium", "hard"]
     x = np.arange(len(diffs))
-    conds = ordered_conditions([g["condition"] for g in groups])
+    conds = ordered_conditions({g["condition"] for g in groups})
     colors = condition_color_map(conds)
     # Build a no-reviewer set from group-level flag
     no_rev_conds = {
@@ -231,7 +231,7 @@ def merged_trend(ax, groups):
 
 
 def merged_diff_match(ax, agg):
-    style_ax(ax, "Difficulty Match % by Condition", "%")
+    style_ax(ax, "Difficulty Match % by Generation Condition", "%")
     conds = [g["condition"] for g in agg]
     colors = condition_color_map(conds)
     for i, g in enumerate(agg):

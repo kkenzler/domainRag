@@ -1,0 +1,26 @@
+{
+  "generated_at": "2026-04-04T19:13:10.456578-07:00",
+  "master_xlsx": "C:\\Users\\kadek\\source\\repos\\domainRag\\analytics\\merged_master.xlsx",
+  "shared_input_json": "C:\\Users\\kadek\\source\\repos\\domainRag\\analytics\\review_input.json",
+  "output_dir": "C:\\Users\\kadek\\source\\repos\\domainRag\\analytics\\merged\\review_analysis",
+  "item_count": 1200,
+  "lane_review_row_count": 2400,
+  "lane_inputs": {
+    "claude": {
+      "label": "Claude",
+      "decisions_json": "C:\\Users\\kadek\\source\\repos\\domainRag\\analytics\\claude_aigenticHumanReview\\claude_review_workdir\\claude_review_decisions.json",
+      "exists": true,
+      "modified_at": "2026-04-04T18:58:59.286164-07:00",
+      "raw_decisions_count": 1200,
+      "unique_item_decisions_count": 1200
+    },
+    "codex": {
+      "label": "Codex",
+      "decisions_json": "C:\\Users\\kadek\\source\\repos\\domainRag\\analytics\\codex_aigenticHumanReview\\codex_review_workdir\\codex_review_decisions.json",
+      "exists": true,
+      "modified_at": "2026-04-04T17:40:48.668934-07:00",
+      "raw_decisions_count": 1200,
+      "unique_item_decisions_count": 1200
+    }
+  }
+}

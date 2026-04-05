@@ -63,15 +63,38 @@ from viz_charts_metrics import (
     merged_document_coverage,
     merged_pathology_summary,
 )
+from viz_charts_review_analysis import (
+    anomaly_counts,
+    answer_key_distribution as review_analysis_answer_key_distribution,
+    coverage_heatmap as review_analysis_coverage_heatmap,
+    failure_modes as review_analysis_failure_modes,
+    lane_accept_heatmap as review_analysis_lane_accept_heatmap,
+    lane_completion as review_analysis_lane_completion,
+    lane_decision_mix as review_analysis_lane_decision_mix,
+    lane_score_heatmap as review_analysis_lane_score_heatmap,
+    lane_score_comparison as review_analysis_lane_score_comparison,
+    load_review_analysis_bundle,
+    reviewer_agreement_rates as review_analysis_reviewer_agreement_rates,
+    reviewer_alignment_heatmap as review_analysis_reviewer_alignment_heatmap,
+    reviewer_vs_lane_nonaccept as review_analysis_reviewer_vs_lane_nonaccept,
+    time_cost_bars as review_analysis_time_cost_bars,
+)
 from viz_io import aggregate_by_condition, claude_review_by_condition, codex_review_by_condition, find_runs, load_batch_run, load_claude_review, load_codex_review, load_merged
 from viz_io import load_claude_review_sheet
 from viz_metrics import batch_metrics_summary, merged_metrics_summary, write_metrics_summary
-from viz_theme import BG, TITLE_COL
+from viz_theme import BG, TEXT_COL, TITLE_COL
+
+
+def _reset_png_dir(path: Path, prefixes: tuple[str, ...] | None = None) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+    for png in path.glob("*.png"):
+        if prefixes is None or png.name.startswith(prefixes):
+            png.unlink()
 
 
 def run_batch_mode(runs_dir: Path, out_dir: Path) -> None:
     charts_dir = out_dir / "charts"
-    charts_dir.mkdir(exist_ok=True)
+    _reset_png_dir(charts_dir)
 
     run_files = find_runs(runs_dir)
     if not run_files:
@@ -130,7 +153,7 @@ def run_batch_mode(runs_dir: Path, out_dir: Path) -> None:
 
 def run_merged_mode(master_path: Path, out_dir: Path) -> None:
     charts_dir = out_dir / "charts"
-    charts_dir.mkdir(exist_ok=True)
+    _reset_png_dir(charts_dir)
 
     print(f"Loading merged data from {master_path}")
     groups = load_merged(master_path)
@@ -200,7 +223,7 @@ def run_merged_mode(master_path: Path, out_dir: Path) -> None:
     chart_api_cost(fig.add_subplot(gs[2, 2]))
     cond_labels = " | ".join([g["condition"] for g in agg])
     total_items = sum(len(g["items"]) for g in agg)
-    fig.suptitle(f"domainRag  —  Condition Comparison  ({total_items} items  ·  {cond_labels})", color=TITLE_COL, fontsize=13, fontweight="bold", y=0.965)
+    fig.suptitle(f"domainRag  —  Generation Condition Comparison  ({total_items} items  ·  {cond_labels})", color=TITLE_COL, fontsize=13, fontweight="bold", y=0.965)
     dash = out_dir / "dashboard.png"
     fig.savefig(dash, dpi=150, bbox_inches="tight", facecolor=BG)
     plt.close(fig)
@@ -234,9 +257,8 @@ def run_merged_mode(master_path: Path, out_dir: Path) -> None:
 
 
 def run_claude_review_mode(decisions_json: Path, out_dir: Path) -> None:
-    out_dir.mkdir(exist_ok=True)
-    charts_dir = out_dir / "charts"
-    charts_dir.mkdir(exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    _reset_png_dir(out_dir, prefixes=("claude_", "dashboard_claude_"))
 
     print(f"Loading Claude review data from {decisions_json}")
     items = load_claude_review(decisions_json)
@@ -263,7 +285,7 @@ def run_claude_review_mode(decisions_json: Path, out_dir: Path) -> None:
         fig, ax = plt.subplots(figsize=(w, h), subplot_kw={"polar": True} if polar else {})
         fig.patch.set_facecolor(BG)
         fn(ax)
-        path = charts_dir / f"{slug}.png"
+        path = out_dir / f"claude_{slug}.png"
         fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=BG)
         plt.close(fig)
         print(f"  chart: {path.name}")
@@ -285,16 +307,15 @@ def run_claude_review_mode(decisions_json: Path, out_dir: Path) -> None:
     cr_accept_vs_match(fig.add_subplot(gs[2, 3]), by_cond)
     total_items = len(items)
     fig.suptitle(f"domainRag  —  Agentic Human Review  ({total_items} items  ·  {len(by_cond)} conditions)", color=TITLE_COL, fontsize=13, fontweight="bold", y=0.965)
-    dash = out_dir / "dashboard.png"
+    dash = out_dir / "dashboard_claude_review.png"
     fig.savefig(dash, dpi=150, bbox_inches="tight", facecolor=BG)
     plt.close(fig)
     print(f"\ndashboard: {dash}")
 
 
 def run_codex_review_mode(decisions_json: Path, out_dir: Path) -> None:
-    out_dir.mkdir(exist_ok=True)
-    charts_dir = out_dir / "charts"
-    charts_dir.mkdir(exist_ok=True)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    _reset_png_dir(out_dir, prefixes=("codex_", "dashboard_codex_"))
 
     print(f"Loading Codex review data from {decisions_json}")
     items = load_codex_review(decisions_json)
@@ -321,7 +342,7 @@ def run_codex_review_mode(decisions_json: Path, out_dir: Path) -> None:
         fig, ax = plt.subplots(figsize=(w, h), subplot_kw={"polar": True} if polar else {})
         fig.patch.set_facecolor(BG)
         fn(ax)
-        path = charts_dir / f"{slug}.png"
+        path = out_dir / f"codex_{slug}.png"
         fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=BG)
         plt.close(fig)
         print(f"  chart: {path.name}")
@@ -343,7 +364,66 @@ def run_codex_review_mode(decisions_json: Path, out_dir: Path) -> None:
     cx_accept_vs_match(fig.add_subplot(gs[2, 3]), by_cond)
     total_items = len(items)
     fig.suptitle(f"domainRag  —  Codex Agentic Review  ({total_items} items  ·  {len(by_cond)} conditions)", color=TITLE_COL, fontsize=13, fontweight="bold", y=0.965)
-    dash = out_dir / "dashboard.png"
+    dash = out_dir / "dashboard_codex_review.png"
+    fig.savefig(dash, dpi=150, bbox_inches="tight", facecolor=BG)
+    plt.close(fig)
+    print(f"\ndashboard: {dash}")
+
+
+def run_review_analysis_mode(analysis_dir: Path, out_dir: Path) -> None:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    _reset_png_dir(out_dir, prefixes=("shared_", "dashboard_review_analysis"))
+
+    print(f"Loading review analysis exports from {analysis_dir}")
+    bundle = load_review_analysis_bundle(analysis_dir)
+
+    chart_specs = [
+        ("01_answer_key_distribution", lambda ax: review_analysis_answer_key_distribution(ax, bundle), 8, 5.5, False),
+        ("02_coverage_heatmap", lambda ax: review_analysis_coverage_heatmap(ax, bundle), 8, 5.5, False),
+        ("03_lane_completion", lambda ax: review_analysis_lane_completion(ax, bundle), 7, 5.5, False),
+        ("04_time_cost", lambda ax: review_analysis_time_cost_bars(ax, bundle), 7, 5.5, False),
+        ("05_failure_modes", lambda ax: review_analysis_failure_modes(ax, bundle), 10, 5.5, False),
+        ("06_lane_decision_mix", lambda ax: review_analysis_lane_decision_mix(ax, bundle), 7, 5.5, False),
+        ("07_reviewer_agreement", lambda ax: review_analysis_reviewer_agreement_rates(ax, bundle), 8, 5.5, False),
+        ("08_reviewer_nonaccept_compare", lambda ax: review_analysis_reviewer_vs_lane_nonaccept(ax, bundle), 8, 5.5, False),
+        ("09_lane_score_comparison", lambda ax: review_analysis_lane_score_comparison(ax, bundle), 8, 5.5, False),
+        ("10_claude_accept_heatmap", lambda ax: review_analysis_lane_accept_heatmap(ax, bundle, "claude", "Claude"), 10, 5.5, False),
+        ("11_codex_accept_heatmap", lambda ax: review_analysis_lane_accept_heatmap(ax, bundle, "codex", "Codex"), 10, 5.5, False),
+        ("12_claude_score_heatmap", lambda ax: review_analysis_lane_score_heatmap(ax, bundle, "claude", "Claude"), 10, 5.5, False),
+        ("13_codex_score_heatmap", lambda ax: review_analysis_lane_score_heatmap(ax, bundle, "codex", "Codex"), 10, 5.5, False),
+        ("14_reviewer_alignment_heatmap", lambda ax: review_analysis_reviewer_alignment_heatmap(ax, bundle), 10, 5.5, False),
+        ("15_data_anomalies", lambda ax: anomaly_counts(ax, bundle), 7, 5.5, False),
+    ]
+
+    for slug, fn, w, h, polar in chart_specs:
+        fig, ax = plt.subplots(figsize=(w, h), subplot_kw={"polar": True} if polar else {})
+        fig.patch.set_facecolor(BG)
+        fn(ax)
+        path = out_dir / f"shared_{slug}.png"
+        fig.savefig(path, dpi=150, bbox_inches="tight", facecolor=BG)
+        plt.close(fig)
+        print(f"  chart: {path.name}")
+
+    fig = plt.figure(figsize=(22, 26))
+    fig.patch.set_facecolor(BG)
+    gs = gridspec.GridSpec(6, 3, figure=fig, hspace=0.60, wspace=0.42, left=0.05, right=0.97, top=0.95, bottom=0.05)
+    review_analysis_answer_key_distribution(fig.add_subplot(gs[0, 0]), bundle)
+    review_analysis_coverage_heatmap(fig.add_subplot(gs[0, 1]), bundle)
+    review_analysis_lane_completion(fig.add_subplot(gs[0, 2]), bundle)
+    review_analysis_time_cost_bars(fig.add_subplot(gs[1, 0]), bundle)
+    review_analysis_failure_modes(fig.add_subplot(gs[1, 1:]), bundle)
+    review_analysis_lane_decision_mix(fig.add_subplot(gs[2, 0]), bundle)
+    review_analysis_reviewer_agreement_rates(fig.add_subplot(gs[2, 1]), bundle)
+    review_analysis_reviewer_vs_lane_nonaccept(fig.add_subplot(gs[2, 2]), bundle)
+    review_analysis_lane_score_comparison(fig.add_subplot(gs[3, 0]), bundle)
+    review_analysis_lane_accept_heatmap(fig.add_subplot(gs[3, 1]), bundle, "claude", "Claude")
+    review_analysis_lane_accept_heatmap(fig.add_subplot(gs[3, 2]), bundle, "codex", "Codex")
+    review_analysis_lane_score_heatmap(fig.add_subplot(gs[4, 0]), bundle, "claude", "Claude")
+    review_analysis_lane_score_heatmap(fig.add_subplot(gs[4, 1]), bundle, "codex", "Codex")
+    review_analysis_reviewer_alignment_heatmap(fig.add_subplot(gs[5, 0:2]), bundle)
+    anomaly_counts(fig.add_subplot(gs[5, 2]), bundle)
+    fig.suptitle("domainRag  —  Review Analysis Dashboard", color=TITLE_COL, fontsize=13, fontweight="bold", y=0.965)
+    dash = out_dir / "dashboard_review_analysis.png"
     fig.savefig(dash, dpi=150, bbox_inches="tight", facecolor=BG)
     plt.close(fig)
     print(f"\ndashboard: {dash}")

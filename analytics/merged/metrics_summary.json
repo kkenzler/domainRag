@@ -1,0 +1,1226 @@
+{
+  "mode": "merged",
+  "metrics": {
+    "by_condition": {
+      "local/local": {
+        "answer_keys": {
+          "counts": {
+            "A": 30,
+            "B": 65,
+            "C": 28,
+            "D": 14,
+            "INVALID": 13
+          },
+          "total_items": 150,
+          "valid_answer_keys": 137,
+          "invalid_answer_keys": 13,
+          "max_letter_share_pct": 47.44525547445255,
+          "entropy_bits": 1.794604838861808,
+          "warn_imbalance": true,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 18.666666666666668,
+          "top_docs": [
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 28
+            },
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 24
+            },
+            {
+              "doc": "Inventory and EOQ Models.pdf",
+              "count": 16
+            },
+            {
+              "doc": "chapter-16.pptx",
+              "count": 15
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 14
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 10,
+          "duplicate_question_rate_pct": 6.666666666666667,
+          "invalid_answer_key_count": 13,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 66,
+          "correct_is_uniquely_longest_rate_pct": 48.175182481751825
+        }
+      },
+      "local/haiku": {
+        "answer_keys": {
+          "counts": {
+            "A": 21,
+            "B": 73,
+            "C": 29,
+            "D": 21,
+            "INVALID": 6
+          },
+          "total_items": 150,
+          "valid_answer_keys": 144,
+          "invalid_answer_keys": 6,
+          "max_letter_share_pct": 50.69444444444444,
+          "entropy_bits": 1.7725918527364182,
+          "warn_imbalance": true,
+          "critical_imbalance": true
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 14.666666666666666,
+          "top_docs": [
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 22
+            },
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 21
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 18
+            },
+            {
+              "doc": "Introduction to Supply Chain Management.pdf",
+              "count": 18
+            },
+            {
+              "doc": "Inventory and EOQ Models.pdf",
+              "count": 16
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 13,
+          "duplicate_question_rate_pct": 8.666666666666668,
+          "invalid_answer_key_count": 6,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 66,
+          "correct_is_uniquely_longest_rate_pct": 45.83333333333333
+        }
+      },
+      "haiku/local": {
+        "answer_keys": {
+          "counts": {
+            "A": 23,
+            "B": 63,
+            "C": 35,
+            "D": 25,
+            "INVALID": 4
+          },
+          "total_items": 150,
+          "valid_answer_keys": 146,
+          "invalid_answer_keys": 4,
+          "max_letter_share_pct": 43.15068493150685,
+          "entropy_bits": 1.8731679115700997,
+          "warn_imbalance": true,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 16.0,
+          "top_docs": [
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 24
+            },
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 20
+            },
+            {
+              "doc": "Inventory and EOQ Models.pdf",
+              "count": 17
+            },
+            {
+              "doc": "Michael-Adjemian.pptx",
+              "count": 16
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 14
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 14,
+          "duplicate_question_rate_pct": 9.333333333333334,
+          "invalid_answer_key_count": 4,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 72,
+          "correct_is_uniquely_longest_rate_pct": 49.31506849315068
+        }
+      },
+      "haiku/haiku": {
+        "answer_keys": {
+          "counts": {
+            "A": 21,
+            "B": 62,
+            "C": 37,
+            "D": 21,
+            "INVALID": 9
+          },
+          "total_items": 150,
+          "valid_answer_keys": 141,
+          "invalid_answer_keys": 9,
+          "max_letter_share_pct": 43.97163120567376,
+          "entropy_bits": 1.8460245614132238,
+          "warn_imbalance": true,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 17.333333333333336,
+          "top_docs": [
+            {
+              "doc": "Inventory and EOQ Models.pdf",
+              "count": 26
+            },
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 24
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 21
+            },
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 18
+            },
+            {
+              "doc": "Analysis of Inventory Models with Limited Demand Information.pdf",
+              "count": 14
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 10,
+          "duplicate_question_rate_pct": 6.666666666666667,
+          "invalid_answer_key_count": 9,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 76,
+          "correct_is_uniquely_longest_rate_pct": 53.90070921985816
+        }
+      },
+      "gpt/baseline": {
+        "answer_keys": {
+          "counts": {
+            "A": 146,
+            "B": 134,
+            "C": 174,
+            "D": 146,
+            "INVALID": 0
+          },
+          "total_items": 600,
+          "valid_answer_keys": 600,
+          "invalid_answer_keys": 0,
+          "max_letter_share_pct": 28.999999999999996,
+          "entropy_bits": 1.9932238721759055,
+          "warn_imbalance": false,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 21.0,
+          "top_docs": [
+            {
+              "doc": "chapter-16.pptx",
+              "count": 126
+            },
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 103
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 64
+            },
+            {
+              "doc": "BeerGame.pptx",
+              "count": 58
+            },
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 56
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 0,
+          "duplicate_question_rate_pct": 0.0,
+          "invalid_answer_key_count": 0,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 136,
+          "correct_is_uniquely_longest_rate_pct": 22.666666666666664
+        }
+      }
+    },
+    "by_condition_difficulty": {
+      "local/local::easy": {
+        "answer_keys": {
+          "counts": {
+            "A": 9,
+            "B": 25,
+            "C": 4,
+            "D": 3,
+            "INVALID": 9
+          },
+          "total_items": 50,
+          "valid_answer_keys": 41,
+          "invalid_answer_keys": 9,
+          "max_letter_share_pct": 60.97560975609756,
+          "entropy_bits": 1.5190003641421714,
+          "warn_imbalance": true,
+          "critical_imbalance": true
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 16.0,
+          "top_docs": [
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 8
+            },
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 8
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 8
+            },
+            {
+              "doc": "Inventory and EOQ Models.pdf",
+              "count": 5
+            },
+            {
+              "doc": "Newsboy Model with Pricing.pdf",
+              "count": 4
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 4,
+          "duplicate_question_rate_pct": 8.0,
+          "invalid_answer_key_count": 9,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 22,
+          "correct_is_uniquely_longest_rate_pct": 53.65853658536586
+        }
+      },
+      "local/local::medium": {
+        "answer_keys": {
+          "counts": {
+            "A": 11,
+            "B": 19,
+            "C": 12,
+            "D": 6,
+            "INVALID": 1
+          },
+          "total_items": 49,
+          "valid_answer_keys": 48,
+          "invalid_answer_keys": 1,
+          "max_letter_share_pct": 39.58333333333333,
+          "entropy_bits": 1.8913438429415894,
+          "warn_imbalance": false,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 20.408163265306122,
+          "top_docs": [
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 10
+            },
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 9
+            },
+            {
+              "doc": "chapter-16.pptx",
+              "count": 6
+            },
+            {
+              "doc": "supplychainmanagement-ppt.pptx",
+              "count": 5
+            },
+            {
+              "doc": "Michael-Adjemian.pptx",
+              "count": 3
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 1,
+          "duplicate_question_rate_pct": 2.0408163265306123,
+          "invalid_answer_key_count": 1,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 23,
+          "correct_is_uniquely_longest_rate_pct": 47.91666666666667
+        }
+      },
+      "local/local::hard": {
+        "answer_keys": {
+          "counts": {
+            "A": 10,
+            "B": 21,
+            "C": 12,
+            "D": 5,
+            "INVALID": 2
+          },
+          "total_items": 50,
+          "valid_answer_keys": 48,
+          "invalid_answer_keys": 2,
+          "max_letter_share_pct": 43.75,
+          "entropy_bits": 1.8331471400895254,
+          "warn_imbalance": true,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 22.0,
+          "top_docs": [
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 11
+            },
+            {
+              "doc": "Inventory and EOQ Models.pdf",
+              "count": 8
+            },
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 6
+            },
+            {
+              "doc": "chapter-16.pptx",
+              "count": 5
+            },
+            {
+              "doc": "Michael-Adjemian.pptx",
+              "count": 4
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 1,
+          "duplicate_question_rate_pct": 2.0,
+          "invalid_answer_key_count": 2,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 21,
+          "correct_is_uniquely_longest_rate_pct": 43.75
+        }
+      },
+      "local/local::unknown": {
+        "answer_keys": {
+          "counts": {
+            "A": 0,
+            "B": 0,
+            "C": 0,
+            "D": 0,
+            "INVALID": 1
+          },
+          "total_items": 1,
+          "valid_answer_keys": 0,
+          "invalid_answer_keys": 1,
+          "max_letter_share_pct": 0.0,
+          "entropy_bits": 0.0,
+          "warn_imbalance": false,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 1,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 100.0,
+          "top_docs": [
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 1
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 0,
+          "duplicate_question_rate_pct": 0.0,
+          "invalid_answer_key_count": 1,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 0,
+          "correct_is_uniquely_longest_rate_pct": 0.0
+        }
+      },
+      "local/haiku::easy": {
+        "answer_keys": {
+          "counts": {
+            "A": 4,
+            "B": 26,
+            "C": 13,
+            "D": 3,
+            "INVALID": 4
+          },
+          "total_items": 50,
+          "valid_answer_keys": 46,
+          "invalid_answer_keys": 4,
+          "max_letter_share_pct": 56.52173913043478,
+          "entropy_bits": 1.5437350754120986,
+          "warn_imbalance": true,
+          "critical_imbalance": true
+        },
+        "document_coverage": {
+          "represented_docs": 10,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 18.0,
+          "top_docs": [
+            {
+              "doc": "Introduction to Supply Chain Management.pdf",
+              "count": 9
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 7
+            },
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 6
+            },
+            {
+              "doc": "BeerGame.pptx",
+              "count": 6
+            },
+            {
+              "doc": "supplychainmanagement-ppt.pptx",
+              "count": 5
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 9,
+          "duplicate_question_rate_pct": 18.0,
+          "invalid_answer_key_count": 4,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 21,
+          "correct_is_uniquely_longest_rate_pct": 45.65217391304348
+        }
+      },
+      "local/haiku::medium": {
+        "answer_keys": {
+          "counts": {
+            "A": 9,
+            "B": 26,
+            "C": 6,
+            "D": 9,
+            "INVALID": 0
+          },
+          "total_items": 50,
+          "valid_answer_keys": 50,
+          "invalid_answer_keys": 0,
+          "max_letter_share_pct": 52.0,
+          "entropy_bits": 1.7482590357355856,
+          "warn_imbalance": true,
+          "critical_imbalance": true
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 22.0,
+          "top_docs": [
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 11
+            },
+            {
+              "doc": "Analysis of Inventory Models with Limited Demand Information.pdf",
+              "count": 6
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 6
+            },
+            {
+              "doc": "Inventory and EOQ Models.pdf",
+              "count": 6
+            },
+            {
+              "doc": "Introduction to Supply Chain Management.pdf",
+              "count": 4
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 3,
+          "duplicate_question_rate_pct": 6.0,
+          "invalid_answer_key_count": 0,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 18,
+          "correct_is_uniquely_longest_rate_pct": 36.0
+        }
+      },
+      "local/haiku::hard": {
+        "answer_keys": {
+          "counts": {
+            "A": 8,
+            "B": 21,
+            "C": 10,
+            "D": 9,
+            "INVALID": 1
+          },
+          "total_items": 49,
+          "valid_answer_keys": 48,
+          "invalid_answer_keys": 1,
+          "max_letter_share_pct": 43.75,
+          "entropy_bits": 1.8768943373834812,
+          "warn_imbalance": true,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 22.448979591836736,
+          "top_docs": [
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 11
+            },
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 8
+            },
+            {
+              "doc": "Inventory and EOQ Models.pdf",
+              "count": 6
+            },
+            {
+              "doc": "Introduction to Supply Chain Management.pdf",
+              "count": 5
+            },
+            {
+              "doc": "BeerGame.pptx",
+              "count": 5
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 1,
+          "duplicate_question_rate_pct": 2.0408163265306123,
+          "invalid_answer_key_count": 1,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 27,
+          "correct_is_uniquely_longest_rate_pct": 56.25
+        }
+      },
+      "local/haiku::unknown": {
+        "answer_keys": {
+          "counts": {
+            "A": 0,
+            "B": 0,
+            "C": 0,
+            "D": 0,
+            "INVALID": 1
+          },
+          "total_items": 1,
+          "valid_answer_keys": 0,
+          "invalid_answer_keys": 1,
+          "max_letter_share_pct": 0.0,
+          "entropy_bits": 0.0,
+          "warn_imbalance": false,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 1,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 100.0,
+          "top_docs": [
+            {
+              "doc": "Newsboy Model with Pricing.pdf",
+              "count": 1
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 0,
+          "duplicate_question_rate_pct": 0.0,
+          "invalid_answer_key_count": 1,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 0,
+          "correct_is_uniquely_longest_rate_pct": 0.0
+        }
+      },
+      "haiku/local::easy": {
+        "answer_keys": {
+          "counts": {
+            "A": 7,
+            "B": 20,
+            "C": 11,
+            "D": 8,
+            "INVALID": 4
+          },
+          "total_items": 50,
+          "valid_answer_keys": 46,
+          "invalid_answer_keys": 4,
+          "max_letter_share_pct": 43.47826086956522,
+          "entropy_bits": 1.8682620830752577,
+          "warn_imbalance": true,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 20.0,
+          "top_docs": [
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 10
+            },
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 8
+            },
+            {
+              "doc": "Michael-Adjemian.pptx",
+              "count": 5
+            },
+            {
+              "doc": "chapter-16.pptx",
+              "count": 5
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 4
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 5,
+          "duplicate_question_rate_pct": 10.0,
+          "invalid_answer_key_count": 4,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 23,
+          "correct_is_uniquely_longest_rate_pct": 50.0
+        }
+      },
+      "haiku/local::medium": {
+        "answer_keys": {
+          "counts": {
+            "A": 8,
+            "B": 25,
+            "C": 9,
+            "D": 8,
+            "INVALID": 0
+          },
+          "total_items": 50,
+          "valid_answer_keys": 50,
+          "invalid_answer_keys": 0,
+          "max_letter_share_pct": 50.0,
+          "entropy_bits": 1.7913415946277462,
+          "warn_imbalance": true,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 18.0,
+          "top_docs": [
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 9
+            },
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 7
+            },
+            {
+              "doc": "Michael-Adjemian.pptx",
+              "count": 6
+            },
+            {
+              "doc": "chapter-16.pptx",
+              "count": 5
+            },
+            {
+              "doc": "BeerGame.pptx",
+              "count": 5
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 3,
+          "duplicate_question_rate_pct": 6.0,
+          "invalid_answer_key_count": 0,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 26,
+          "correct_is_uniquely_longest_rate_pct": 52.0
+        }
+      },
+      "haiku/local::hard": {
+        "answer_keys": {
+          "counts": {
+            "A": 8,
+            "B": 18,
+            "C": 15,
+            "D": 9,
+            "INVALID": 0
+          },
+          "total_items": 50,
+          "valid_answer_keys": 50,
+          "invalid_answer_keys": 0,
+          "max_letter_share_pct": 36.0,
+          "entropy_bits": 1.9200295103133205,
+          "warn_imbalance": false,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 20.0,
+          "top_docs": [
+            {
+              "doc": "Inventory and EOQ Models.pdf",
+              "count": 10
+            },
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 7
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 6
+            },
+            {
+              "doc": "Analysis of Inventory Models with Limited Demand Information.pdf",
+              "count": 5
+            },
+            {
+              "doc": "Michael-Adjemian.pptx",
+              "count": 5
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 2,
+          "duplicate_question_rate_pct": 4.0,
+          "invalid_answer_key_count": 0,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 23,
+          "correct_is_uniquely_longest_rate_pct": 46.0
+        }
+      },
+      "haiku/haiku::easy": {
+        "answer_keys": {
+          "counts": {
+            "A": 7,
+            "B": 28,
+            "C": 5,
+            "D": 5,
+            "INVALID": 5
+          },
+          "total_items": 50,
+          "valid_answer_keys": 45,
+          "invalid_answer_keys": 5,
+          "max_letter_share_pct": 62.22222222222222,
+          "entropy_bits": 1.5479263580876799,
+          "warn_imbalance": true,
+          "critical_imbalance": true
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 22.0,
+          "top_docs": [
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 11
+            },
+            {
+              "doc": "Inventory and EOQ Models.pdf",
+              "count": 10
+            },
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 8
+            },
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 5
+            },
+            {
+              "doc": "Analysis of Inventory Models with Limited Demand Information.pdf",
+              "count": 4
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 5,
+          "duplicate_question_rate_pct": 10.0,
+          "invalid_answer_key_count": 5,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 22,
+          "correct_is_uniquely_longest_rate_pct": 48.888888888888886
+        }
+      },
+      "haiku/haiku::medium": {
+        "answer_keys": {
+          "counts": {
+            "A": 7,
+            "B": 18,
+            "C": 15,
+            "D": 9,
+            "INVALID": 1
+          },
+          "total_items": 50,
+          "valid_answer_keys": 49,
+          "invalid_answer_keys": 1,
+          "max_letter_share_pct": 36.734693877551024,
+          "entropy_bits": 1.9036319170239135,
+          "warn_imbalance": false,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 10,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 18.0,
+          "top_docs": [
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 9
+            },
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 8
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 7
+            },
+            {
+              "doc": "Analysis of Inventory Models with Limited Demand Information.pdf",
+              "count": 6
+            },
+            {
+              "doc": "Michael-Adjemian.pptx",
+              "count": 5
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 2,
+          "duplicate_question_rate_pct": 4.0,
+          "invalid_answer_key_count": 1,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 28,
+          "correct_is_uniquely_longest_rate_pct": 57.14285714285714
+        }
+      },
+      "haiku/haiku::hard": {
+        "answer_keys": {
+          "counts": {
+            "A": 7,
+            "B": 16,
+            "C": 17,
+            "D": 7,
+            "INVALID": 2
+          },
+          "total_items": 49,
+          "valid_answer_keys": 47,
+          "invalid_answer_keys": 2,
+          "max_letter_share_pct": 36.17021276595745,
+          "entropy_bits": 1.8782093365699304,
+          "warn_imbalance": false,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 10,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 24.489795918367346,
+          "top_docs": [
+            {
+              "doc": "Inventory and EOQ Models.pdf",
+              "count": 12
+            },
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 10
+            },
+            {
+              "doc": "Introduction to Supply Chain Management.pdf",
+              "count": 5
+            },
+            {
+              "doc": "Michael-Adjemian.pptx",
+              "count": 4
+            },
+            {
+              "doc": "supplychainmanagement-ppt.pptx",
+              "count": 4
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 1,
+          "duplicate_question_rate_pct": 2.0408163265306123,
+          "invalid_answer_key_count": 2,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 26,
+          "correct_is_uniquely_longest_rate_pct": 55.319148936170215
+        }
+      },
+      "haiku/haiku::unknown": {
+        "answer_keys": {
+          "counts": {
+            "A": 0,
+            "B": 0,
+            "C": 0,
+            "D": 0,
+            "INVALID": 1
+          },
+          "total_items": 1,
+          "valid_answer_keys": 0,
+          "invalid_answer_keys": 1,
+          "max_letter_share_pct": 0.0,
+          "entropy_bits": 0.0,
+          "warn_imbalance": false,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 1,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 100.0,
+          "top_docs": [
+            {
+              "doc": "Analysis of Inventory Models with Limited Demand Information.pdf",
+              "count": 1
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 0,
+          "duplicate_question_rate_pct": 0.0,
+          "invalid_answer_key_count": 1,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 0,
+          "correct_is_uniquely_longest_rate_pct": 0.0
+        }
+      },
+      "gpt/baseline::easy": {
+        "answer_keys": {
+          "counts": {
+            "A": 39,
+            "B": 55,
+            "C": 56,
+            "D": 50,
+            "INVALID": 0
+          },
+          "total_items": 200,
+          "valid_answer_keys": 200,
+          "invalid_answer_keys": 0,
+          "max_letter_share_pct": 28.000000000000004,
+          "entropy_bits": 1.9863054102574944,
+          "warn_imbalance": false,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 15.5,
+          "top_docs": [
+            {
+              "doc": "chapter-16.pptx",
+              "count": 31
+            },
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 30
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 22
+            },
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 20
+            },
+            {
+              "doc": "BeerGame.pptx",
+              "count": 18
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 0,
+          "duplicate_question_rate_pct": 0.0,
+          "invalid_answer_key_count": 0,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 53,
+          "correct_is_uniquely_longest_rate_pct": 26.5
+        }
+      },
+      "gpt/baseline::medium": {
+        "answer_keys": {
+          "counts": {
+            "A": 53,
+            "B": 38,
+            "C": 57,
+            "D": 52,
+            "INVALID": 0
+          },
+          "total_items": 200,
+          "valid_answer_keys": 200,
+          "invalid_answer_keys": 0,
+          "max_letter_share_pct": 28.499999999999996,
+          "entropy_bits": 1.9843630610075602,
+          "warn_imbalance": false,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 23.5,
+          "top_docs": [
+            {
+              "doc": "chapter-16.pptx",
+              "count": 47
+            },
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 35
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 21
+            },
+            {
+              "doc": "BeerGame.pptx",
+              "count": 20
+            },
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 18
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 0,
+          "duplicate_question_rate_pct": 0.0,
+          "invalid_answer_key_count": 0,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 50,
+          "correct_is_uniquely_longest_rate_pct": 25.0
+        }
+      },
+      "gpt/baseline::hard": {
+        "answer_keys": {
+          "counts": {
+            "A": 54,
+            "B": 41,
+            "C": 61,
+            "D": 44,
+            "INVALID": 0
+          },
+          "total_items": 200,
+          "valid_answer_keys": 200,
+          "invalid_answer_keys": 0,
+          "max_letter_share_pct": 30.5,
+          "entropy_bits": 1.9817885591869953,
+          "warn_imbalance": false,
+          "critical_imbalance": false
+        },
+        "document_coverage": {
+          "represented_docs": 11,
+          "missing_seed_doc_count": 0,
+          "max_doc_share_pct": 24.0,
+          "top_docs": [
+            {
+              "doc": "chapter-16.pptx",
+              "count": 48
+            },
+            {
+              "doc": "Introduction to Stochastic Inventory Models and Supply Contracts.pdf",
+              "count": 38
+            },
+            {
+              "doc": "Logistitics and Distribution Systems.pdf",
+              "count": 21
+            },
+            {
+              "doc": "BeerGame.pptx",
+              "count": 20
+            },
+            {
+              "doc": "Issues in Supply Chain Strategy.pdf",
+              "count": 18
+            }
+          ],
+          "topic_coverage_available": false,
+          "topic_coverage_note": "Current workbook schema has no topic/subtopic columns; only document coverage can be measured directly."
+        },
+        "pathologies": {
+          "duplicate_question_instances": 0,
+          "duplicate_question_rate_pct": 0.0,
+          "invalid_answer_key_count": 0,
+          "missing_seed_doc_count": 0,
+          "correct_is_uniquely_longest_count": 33,
+          "correct_is_uniquely_longest_rate_pct": 16.5
+        }
+      }
+    }
+  }
+}

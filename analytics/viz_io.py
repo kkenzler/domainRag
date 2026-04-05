@@ -10,6 +10,55 @@ import openpyxl
 from viz_conditions import ordered_conditions
 
 
+_SHARED_INPUT_JSON = Path(__file__).resolve().parent / "review_input.json"
+_SHARED_MASTER_XLSX = Path(__file__).resolve().parent / "merged_master.xlsx"
+
+
+def _shared_item_metadata_map() -> dict[tuple[str, str], dict]:
+    out = {}
+    if _SHARED_INPUT_JSON.exists():
+        with open(_SHARED_INPUT_JSON, encoding="utf-8") as f:
+            rows = json.load(f)
+        for row in rows:
+            key = (str(row.get("run_id") or ""), str(row.get("item_id") or ""))
+            out[key] = {
+                "run_id": row.get("run_id"),
+                "item_id": row.get("item_id"),
+                "batch_label": row.get("batch_label"),
+                "condition": row.get("condition"),
+                "difficulty": row.get("difficulty"),
+                "question": row.get("question"),
+                "correct_key": row.get("correct_key"),
+                "reviewer_decision": row.get("decision"),
+            }
+    if _SHARED_MASTER_XLSX.exists():
+        wb = openpyxl.load_workbook(_SHARED_MASTER_XLSX, read_only=True, data_only=True)
+        ws = wb["Items"]
+        headers = [c.value for c in next(ws.iter_rows(max_row=1))]
+        idx = {h: i for i, h in enumerate(headers)}
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            run_id = row[idx["run_id"]] if "run_id" in idx else None
+            item_id = row[idx["item_id"]] if "item_id" in idx else None
+            if run_id is None or item_id is None:
+                continue
+            key = (str(run_id or ""), str(item_id or ""))
+            base = out.setdefault(key, {})
+            base.setdefault("run_id", run_id)
+            base.setdefault("item_id", item_id)
+            for src, dst in [
+                ("batch_label", "batch_label"),
+                ("condition", "condition"),
+                ("difficulty", "difficulty"),
+                ("question", "question"),
+                ("correct_key", "correct_key"),
+                ("decision", "reviewer_decision"),
+            ]:
+                if src in idx and base.get(dst) in {None, ""}:
+                    base[dst] = row[idx[src]]
+        wb.close()
+    return out
+
+
 def find_runs(runs_dir: Path):
     found = {}
     for xlsx in sorted(runs_dir.glob("run_*.xlsx")):
@@ -86,7 +135,7 @@ def load_merged(master_path: Path) -> list:
         diff = row[idx.get("difficulty", 0)] or "unknown"
         key = (cond, diff)
         if key not in groups:
-            groups[key] = {"condition": cond, "difficulty": diff, "items": [], "qm": {}}
+            groups[key] = {"condition": cond, "difficulty": diff, "items": [], "qm": {}, "has_reviewer_metrics": False}
         groups[key]["items"].append(
             {
                 "question": row[idx["question"]] if "question" in idx else None,
@@ -103,6 +152,8 @@ def load_merged(master_path: Path) -> list:
                 "difficulty_match": row[idx["difficulty_match"]],
             }
         )
+        if row[idx["decision"]] is not None:
+            groups[key]["has_reviewer_metrics"] = True
 
     ws_qm = wb["Quality Metrics"]
     qm_hdrs = [c.value for c in next(ws_qm.iter_rows(max_row=1))]
@@ -159,7 +210,8 @@ def aggregate_by_condition(groups: list) -> list:
 def load_claude_review(decisions_json: Path) -> list:
     with open(decisions_json, encoding="utf-8") as f:
         raw = json.load(f)
-    return [_normalize_claude_review_item(item) for item in raw]
+    meta = _shared_item_metadata_map()
+    return [_normalize_claude_review_item(item, meta) for item in raw]
 
 
 def load_claude_review_sheet(master_path: Path) -> list:
@@ -171,12 +223,19 @@ def load_claude_review_sheet(master_path: Path) -> list:
     headers = [c.value for c in next(ws.iter_rows(max_row=1))]
     items = [dict(zip(headers, row)) for row in ws.iter_rows(min_row=2, values_only=True) if row[0] is not None]
     wb.close()
-    return [_normalize_claude_review_item(item) for item in items]
+    meta = _shared_item_metadata_map()
+    return [_normalize_claude_review_item(item, meta) for item in items]
 
 
-def _normalize_claude_review_item(item: dict) -> dict:
-    item["condition"] = item.get("condition") or "unknown"
-    item["difficulty"] = item.get("difficulty") or "unknown"
+def _normalize_claude_review_item(item: dict, meta: dict[tuple[str, str], dict] | None = None) -> dict:
+    key = (str(item.get("run_id") or ""), str(item.get("item_id") or ""))
+    fallback = (meta or {}).get(key, {})
+    item["batch_label"] = item.get("batch_label") or fallback.get("batch_label")
+    item["condition"] = item.get("condition") or fallback.get("condition") or "unknown"
+    item["difficulty"] = item.get("difficulty") or fallback.get("difficulty") or "unknown"
+    item["question"] = item.get("question") or fallback.get("question")
+    item["correct_key"] = item.get("correct_key") or fallback.get("correct_key")
+    item["reviewer_decision"] = item.get("reviewer_decision") or fallback.get("reviewer_decision")
     for bfield in (
         "agrees_with_reviewer",
         "flag_ambiguity",
@@ -197,6 +256,12 @@ def _normalize_claude_review_item(item: dict) -> dict:
         v = item.get(sfield)
         if isinstance(v, str) and v.strip().isdigit():
             item[sfield] = int(v.strip())
+    reviewer_decision = item.get("reviewer_decision")
+    lane_decision = item.get("claude_decision")
+    if reviewer_decision in {None, ""}:
+        item["agrees_with_reviewer"] = None
+    elif item.get("agrees_with_reviewer") in {None, ""} and lane_decision not in {None, ""}:
+        item["agrees_with_reviewer"] = reviewer_decision == lane_decision
     return item
 
 
@@ -210,12 +275,19 @@ def claude_review_by_condition(items: list) -> dict:
 def load_codex_review(decisions_json: Path) -> list:
     with open(decisions_json, encoding="utf-8") as f:
         raw = json.load(f)
-    return [_normalize_codex_review_item(item) for item in raw]
+    meta = _shared_item_metadata_map()
+    return [_normalize_codex_review_item(item, meta) for item in raw]
 
 
-def _normalize_codex_review_item(item: dict) -> dict:
-    item["condition"] = item.get("condition") or "unknown"
-    item["difficulty"] = item.get("difficulty") or "unknown"
+def _normalize_codex_review_item(item: dict, meta: dict[tuple[str, str], dict] | None = None) -> dict:
+    key = (str(item.get("run_id") or ""), str(item.get("item_id") or ""))
+    fallback = (meta or {}).get(key, {})
+    item["batch_label"] = item.get("batch_label") or fallback.get("batch_label")
+    item["condition"] = item.get("condition") or fallback.get("condition") or "unknown"
+    item["difficulty"] = item.get("difficulty") or fallback.get("difficulty") or "unknown"
+    item["question"] = item.get("question") or fallback.get("question")
+    item["correct_key"] = item.get("correct_key") or fallback.get("correct_key")
+    item["reviewer_decision"] = item.get("reviewer_decision") or fallback.get("reviewer_decision")
     for bfield in (
         "agrees_with_reviewer",
         "flag_ambiguity",
@@ -236,6 +308,12 @@ def _normalize_codex_review_item(item: dict) -> dict:
         v = item.get(sfield)
         if isinstance(v, str) and v.strip().isdigit():
             item[sfield] = int(v.strip())
+    reviewer_decision = item.get("reviewer_decision")
+    lane_decision = item.get("review_decision")
+    if reviewer_decision in {None, ""}:
+        item["agrees_with_reviewer"] = None
+    elif item.get("agrees_with_reviewer") in {None, ""} and lane_decision not in {None, ""}:
+        item["agrees_with_reviewer"] = reviewer_decision == lane_decision
     return item
 
 
