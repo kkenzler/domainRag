@@ -86,19 +86,25 @@ def flag_bar(ax, by_cond: dict):
 def decision_heatmap(ax, items: list):
     diffs = ["easy", "medium", "hard"]
     conds = ordered_conditions([it["condition"] for it in items])
-    matrix = np.zeros((len(conds), len(diffs)))
+    matrix = np.full((len(conds), len(diffs)), np.nan)
     for i, cond in enumerate(conds):
         for j, diff in enumerate(diffs):
             sub = [it for it in items if it["condition"] == cond and it["difficulty"] == diff]
-            matrix[i, j] = (sum(1 for it in sub if it["claude_decision"] == "ACCEPT") / len(sub) * 100) if sub else 0
-    im = ax.imshow(matrix, cmap="RdYlGn", vmin=0, vmax=100, aspect="auto")
+            if sub:
+                matrix[i, j] = sum(1 for it in sub if it["claude_decision"] == "ACCEPT") / len(sub) * 100
+    cmap = plt.get_cmap("RdYlGn").copy()
+    cmap.set_bad(color="#333333")
+    im = ax.imshow(matrix, cmap=cmap, vmin=0, vmax=100, aspect="auto")
     ax.set_xticks(range(len(diffs)))
     ax.set_xticklabels(diffs, color=TEXT_COL, fontsize=9)
     ax.set_yticks(range(len(conds)))
     ax.set_yticklabels([review_condition_label(c, "claude") for c in conds], color=TEXT_COL, fontsize=9)
     for i in range(len(conds)):
         for j in range(len(diffs)):
-            ax.text(j, i, f"{matrix[i,j]:.0f}%", ha="center", va="center", color="black", fontsize=10, fontweight="bold")
+            if np.isnan(matrix[i, j]):
+                ax.text(j, i, "N/A", ha="center", va="center", color="#888888", fontsize=9, fontstyle="italic")
+            else:
+                ax.text(j, i, f"{matrix[i,j]:.0f}%", ha="center", va="center", color="black", fontsize=10, fontweight="bold")
     ax.set_title("Claude ACCEPT Rate  (generation condition x difficulty)", color=TITLE_COL, fontsize=11, fontweight="bold", pad=8)
     plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04).ax.yaxis.set_tick_params(color=TEXT_COL)
 
