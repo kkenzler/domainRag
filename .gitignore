@@ -9,14 +9,6 @@ _rag_testGen/config.env
 _archive/
 
 # analytics/ is now intended to be tracked
-analytics/.mplconfig/
-analytics/claude_aigenticHumanReview/claude_review_workdir/batch_*.json
-analytics/claude_aigenticHumanReview/claude_review_workdir/slice_*.json
-analytics/claude_aigenticHumanReview/claude_review_workdir/items_*.txt
-analytics/claude_aigenticHumanReview/claude_review_workdir/items_*.json
-analytics/claude_aigenticHumanReview/claude_review_workdir/tmp_slice.json
-analytics/claude_aigenticHumanReview/claude_review_workdir/*.pre_repair_*.json
-analytics/claude_aigenticHumanReview/claude_review_workdir/*.malformed_preswap.json
 
 # Client/confidential corpus folders — never commit
 _client_corpus/
