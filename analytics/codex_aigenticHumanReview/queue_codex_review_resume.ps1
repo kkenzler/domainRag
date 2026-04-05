@@ -8,7 +8,7 @@ if (-not $PromptPath) {
     $PromptPath = Join-Path (Split-Path -Parent $PSCommandPath) "codex_review_resume_prompt.md"
 }
 
-$QueueRoot = "C:\Users\kadek\source\.cogark\agent_infra\agent_sync\queues\codex"
+$QueueRoot = "C:\Users\kadek\source\.cogark\control_plane\agent_sync\queues\codex"
 $Inbox = Join-Path $QueueRoot "inbox"
 
 New-Item -ItemType Directory -Force -Path $Inbox | Out-Null
@@ -44,3 +44,4 @@ $payload = [ordered]@{
 $outPath = Join-Path $Inbox ($id + ".json")
 $payload | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $outPath -Encoding UTF8
 Write-Host ("queued={0} chars={1}" -f $outPath, $prompt.Length)
+

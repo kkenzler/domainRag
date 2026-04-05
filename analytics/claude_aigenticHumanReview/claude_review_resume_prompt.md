@@ -2,7 +2,8 @@ Continue the true manual `domainRag` review from the next unreviewed item in the
 
 Ground rules:
 - Read exported items from `C:\Users\kadek\source\repos\domainRag\analytics\review_input.json`
-- Write decisions only to `C:\Users\kadek\secrets\domainRag\claude-review\claude-review-batching\claude_review_decisions.json`
+- Work only from `C:\Users\kadek\source\repos\domainRag\analytics\claude_aigenticHumanReview\claude_review_workdir\`
+- Write decisions only to `C:\Users\kadek\source\repos\domainRag\analytics\claude_aigenticHumanReview\claude_review_workdir\claude_review_decisions.json`
 - Do not touch the Codex local workdir during the incremental pass
 - Do not rename files
 - Do not change workflow code unless something is actually broken

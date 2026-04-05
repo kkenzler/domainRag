@@ -8,7 +8,7 @@ def review_dir() -> Path:
     override = (os.environ.get("DOMAINRAG_REVIEW_DIR") or "").strip()
     if override:
         return Path(override).expanduser().resolve()
-    return (Path.home() / "secrets" / "domainRag" / "claude-review" / "claude-review-batching").resolve()
+    return (Path(__file__).resolve().parent / "claude_review_workdir").resolve()
 
 
 def input_json_path() -> Path:
@@ -24,4 +24,4 @@ def decisions_json_path() -> Path:
 
 
 def review_output_root() -> Path:
-    return review_dir().parent
+    return (Path(__file__).resolve().parent.parent / "merged" / "review_analysis" / "charts").resolve()

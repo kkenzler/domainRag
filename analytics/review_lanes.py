@@ -20,7 +20,7 @@ class ReviewLane:
 
 
 CLAUDE_DECISIONS = (
-    Path.home() / "secrets" / "domainRag" / "claude-review" / "claude-review-batching" / "claude_review_decisions.json"
+    ANALYTICS_DIR / "claude_aigenticHumanReview" / "claude_review_workdir" / "claude_review_decisions.json"
 ).resolve()
 CODEX_DECISIONS = (
     ANALYTICS_DIR / "codex_aigenticHumanReview" / "codex_review_workdir" / "codex_review_decisions.json"

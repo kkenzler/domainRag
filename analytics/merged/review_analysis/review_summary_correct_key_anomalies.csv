@@ -1,0 +1,33 @@
+run_id,item_id,batch_label,condition,difficulty,correct_key_raw,correct_key_normalized,seed_doc_path
+20260330_003121Z_local_local,item_12,local-local,local/local,easy,B|A|C|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Issues in Supply Chain Strategy.pdf
+20260330_003121Z_local_local,item_14,local-local,local/local,easy,B|C|D|A,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Issues in Supply Chain Strategy.pdf
+20260330_003121Z_local_local,item_22,local-local,local/local,easy,B|C|D|B,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Newsboy Model with Pricing.pdf
+20260330_003121Z_local_local,item_24,local-local,local/local,easy,A|B,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Inventory and EOQ Models.pdf
+20260330_003121Z_local_local,item_3,local-local,local/local,easy,C|B|A|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Newsboy Model with Pricing.pdf
+20260330_003121Z_local_local,item_37,local-local,local/local,easy,B|C,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Newsboy Model with Pricing.pdf
+20260330_003121Z_local_local,item_39,local-local,local/local,easy,A|B|C,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Newsboy Model with Pricing.pdf
+20260330_003121Z_local_local,item_49,local-local,local/local,easy,B|A|C|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Issues in Supply Chain Strategy.pdf
+20260330_003121Z_local_local,item_7,local-local,local/local,easy,B|A|C|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Issues in Supply Chain Strategy.pdf
+20260330_030124Z_local_local,item_30,local-local,local/local,medium,B|A|C|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Inventory and EOQ Models.pdf
+20260330_030124Z_local_local,item_44,local-local,local/local,,,UNKNOWN,C:\Users\kadek\source\repos\domainRag\example1\Logistitics and Distribution Systems.pdf
+20260330_042518Z_local_local,item_16,local-local,local/local,hard,A|B,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Michael-Adjemian.pptx
+20260330_042518Z_local_local,item_29,local-local,local/local,hard,A|C,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Inventory and EOQ Models.pdf
+20260330_055848Z_local_haiku,item_24,haiku-reviewer,local/haiku,easy,B|A|C|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Issues in Supply Chain Strategy.pdf
+20260330_055848Z_local_haiku,item_37,haiku-reviewer,local/haiku,easy,B|D|C|A,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Issues in Supply Chain Strategy.pdf
+20260330_055848Z_local_haiku,item_38,haiku-reviewer,local/haiku,easy,A|B|C|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Newsboy Model with Pricing.pdf
+20260330_055848Z_local_haiku,item_8,haiku-reviewer,local/haiku,easy,A|B|C|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Newsboy Model with Pricing.pdf
+20260330_084853Z_local_haiku,item_24,haiku-reviewer,local/haiku,,,UNKNOWN,C:\Users\kadek\source\repos\domainRag\example1\Newsboy Model with Pricing.pdf
+20260330_084853Z_local_haiku,item_6,haiku-reviewer,local/haiku,hard,A|B|C|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Issues in Supply Chain Strategy.pdf
+20260330_103241Z_haiku_local,item_16,haiku-generator,haiku/local,easy,A|B|C|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Newsboy Model with Pricing.pdf
+20260330_103241Z_haiku_local,item_19,haiku-generator,haiku/local,easy,B|C|A|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Newsboy Model with Pricing.pdf
+20260330_103241Z_haiku_local,item_26,haiku-generator,haiku/local,easy,B|A|D|C,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Issues in Supply Chain Strategy.pdf
+20260330_103241Z_haiku_local,item_9,haiku-generator,haiku/local,easy,A|B|C|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Introduction to Stochastic Inventory Models and Supply Contracts.pdf
+20260330_150022Z_haiku_haiku,item_24,haiku-both,haiku/haiku,easy,B|A|C|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Issues in Supply Chain Strategy.pdf
+20260330_150022Z_haiku_haiku,item_31,haiku-both,haiku/haiku,easy,A|B|C,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Newsboy Model with Pricing.pdf
+20260330_150022Z_haiku_haiku,item_4,haiku-both,haiku/haiku,easy,C|B|C|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Logistitics and Distribution Systems.pdf
+20260330_150022Z_haiku_haiku,item_40,haiku-both,haiku/haiku,easy,B|C|D|A,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Logistitics and Distribution Systems.pdf
+20260330_150022Z_haiku_haiku,item_44,haiku-both,haiku/haiku,easy,A|B,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Newsboy Model with Pricing.pdf
+20260330_163416Z_haiku_haiku,item_3,haiku-both,haiku/haiku,medium,C|D,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Introduction to Stochastic Inventory Models and Supply Contracts.pdf
+20260330_181938Z_haiku_haiku,item_13,haiku-both,haiku/haiku,,,UNKNOWN,C:\Users\kadek\source\repos\domainRag\example1\Analysis of Inventory Models with Limited Demand Information.pdf
+20260330_181938Z_haiku_haiku,item_37,haiku-both,haiku/haiku,hard,C|B|C|A,MULTI,C:\Users\kadek\source\repos\domainRag\example1\Inventory and EOQ Models.pdf
+20260330_181938Z_haiku_haiku,item_46,haiku-both,haiku/haiku,hard,A|B,MULTI,C:\Users\kadek\source\repos\domainRag\example1\supplychainmanagement-ppt.pptx

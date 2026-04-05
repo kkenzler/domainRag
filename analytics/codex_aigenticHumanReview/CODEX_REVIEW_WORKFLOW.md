@@ -9,7 +9,7 @@ Use this workflow when Codex is doing true manual review over the exported
 
 The canonical review export and decision files normally live under:
 
-- `C:\Users\kadek\secrets\domainRag\claude-review\claude-review-batching\`
+- `C:\Users\kadek\source\repos\domainRag\analytics\claude_aigenticHumanReview\claude_review_workdir\`
 
 That is outside the normal workspace write root, which causes repeated
 permission prompts during long manual review passes.
@@ -141,7 +141,8 @@ Active queue-resume files:
 Queue-run prerequisites:
 
 - the Codex terminal window must actually exist
-- its window title must be `Codex`
+- launch it via `C:\Users\kadek\source\.cogark\control_plane\ai_terminals\launchers\launch_codex.ps1`
+- its window title must be `codex`
 - the Codex `agent_sync` listener should be in `listening` state
 - the local workdir JSON files must remain at their current names
 
@@ -180,3 +181,4 @@ target count, which defaults to `1200`.
 - If downstream tooling needs a different review sheet title or a different
   canonical filename, change that deliberately rather than pretending Codex work
   is "Claude review."
+

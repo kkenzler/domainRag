@@ -1,0 +1,23 @@
+seed_doc_path,item_count,distinct_run_count,distinct_condition_count,distinct_difficulty_count,conditions,difficulties,codex_reviewed_count,claude_reviewed_count,dual_reviewed_count
+Analysis of Inventory Models with Limited Demand Information.pdf,28,3,1,3,gpt/baseline,easy|hard|medium,28,28,28
+BeerGame.pptx,58,3,1,3,gpt/baseline,easy|hard|medium,58,58,58
+C:\Users\kadek\source\repos\domainRag\example1\Analysis of Inventory Models with Limited Demand Information.pdf,46,12,4,4,haiku/haiku|haiku/local|local/haiku|local/local,easy|hard|medium,46,46,46
+C:\Users\kadek\source\repos\domainRag\example1\BeerGame.pptx,34,12,4,3,haiku/haiku|haiku/local|local/haiku|local/local,easy|hard|medium,34,34,34
+C:\Users\kadek\source\repos\domainRag\example1\Introduction to Stochastic Inventory Models and Supply Contracts.pdf,90,12,4,3,haiku/haiku|haiku/local|local/haiku|local/local,easy|hard|medium,90,90,90
+C:\Users\kadek\source\repos\domainRag\example1\Introduction to Supply Chain Management.pdf,45,12,4,3,haiku/haiku|haiku/local|local/haiku|local/local,easy|hard|medium,45,45,45
+C:\Users\kadek\source\repos\domainRag\example1\Inventory and EOQ Models.pdf,75,12,4,3,haiku/haiku|haiku/local|local/haiku|local/local,easy|hard|medium,75,75,75
+C:\Users\kadek\source\repos\domainRag\example1\Issues in Supply Chain Strategy.pdf,91,12,4,3,haiku/haiku|haiku/local|local/haiku|local/local,easy|hard|medium,91,91,91
+C:\Users\kadek\source\repos\domainRag\example1\Logistitics and Distribution Systems.pdf,67,12,4,4,haiku/haiku|haiku/local|local/haiku|local/local,easy|hard|medium,67,67,67
+C:\Users\kadek\source\repos\domainRag\example1\Michael-Adjemian.pptx,45,11,4,3,haiku/haiku|haiku/local|local/haiku|local/local,easy|hard|medium,45,45,45
+C:\Users\kadek\source\repos\domainRag\example1\Newsboy Model with Pricing.pdf,26,10,4,4,haiku/haiku|haiku/local|local/haiku|local/local,easy|hard|medium,26,26,26
+C:\Users\kadek\source\repos\domainRag\example1\chapter-16.pptx,43,12,4,3,haiku/haiku|haiku/local|local/haiku|local/local,easy|hard|medium,43,43,43
+C:\Users\kadek\source\repos\domainRag\example1\supplychainmanagement-ppt.pptx,38,12,4,3,haiku/haiku|haiku/local|local/haiku|local/local,easy|hard|medium,38,38,38
+Introduction to Stochastic Inventory Models and Supply Contracts.pdf,103,3,1,3,gpt/baseline,easy|hard|medium,103,103,103
+Introduction to Supply Chain Management.pdf,44,3,1,3,gpt/baseline,easy|hard|medium,44,44,44
+Inventory and EOQ Models.pdf,28,3,1,3,gpt/baseline,easy|hard|medium,28,28,28
+Issues in Supply Chain Strategy.pdf,56,3,1,3,gpt/baseline,easy|hard|medium,56,56,56
+Logistitics and Distribution Systems.pdf,64,3,1,3,gpt/baseline,easy|hard|medium,64,64,64
+Michael-Adjemian.pptx,39,3,1,3,gpt/baseline,easy|hard|medium,39,39,39
+Newsboy Model with Pricing.pdf,13,3,1,3,gpt/baseline,easy|hard|medium,13,13,13
+chapter-16.pptx,126,3,1,3,gpt/baseline,easy|hard|medium,126,126,126
+supplychainmanagement-ppt.pptx,41,3,1,3,gpt/baseline,easy|hard|medium,41,41,41

@@ -7,8 +7,10 @@ Orchestrates the end-of-study pipeline in order:
   2. aigenticHumanReview     export items → review_input.json
   3. dual review gate        hard-stop unless Claude + Codex review are complete
   4. write review sheets     write Claude Review + Codex Review into merged_master.xlsx
-  5. analyticsVizs --merged  render cross-condition comparison charts
-  6. analyticsVizs --review  render Claude review charts
+  5. build review exports    write shared review-analysis exports
+  6. analyticsVizs --claude-review  render Claude review charts
+  7. analyticsVizs --codex-review   render Codex review charts
+  8. analyticsVizs --review-analysis  render shared review-analysis charts
 
 Usage:
     python analytics/finalize_study.py
@@ -26,6 +28,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -50,6 +54,10 @@ MERGE_PY  = SCRIPT_DIR / "merge_runs.py"
 REVIEW_PY = SCRIPT_DIR / "claude_aigenticHumanReview" / "aigenticHumanReview.py"
 CODEX_REVIEW_PY = SCRIPT_DIR / "codex_aigenticHumanReview" / "aigenticHumanReview.py"
 VIZ_PY    = SCRIPT_DIR / "analyticsVizs.py"
+REVIEW_ANALYSIS_PY = SCRIPT_DIR / "build_review_analysis_exports.py"
+REVIEW_ANALYSIS_DIR = SCRIPT_DIR / "merged" / "review_analysis"
+REVIEW_ANALYSIS_CHARTS_DIR = REVIEW_ANALYSIS_DIR / "charts"
+WORKBOOK_LOCK = SCRIPT_DIR / "~$merged_master.xlsx"
 
 _W = 56
 
@@ -59,14 +67,17 @@ _W = 56
 # ---------------------------------------------------------------------------
 
 def _hdr(label: str) -> None:
-    print(f"\n{'─' * _W}")
+    print(f"\n{'-' * _W}")
     print(f"  {label}")
-    print(f"{'─' * _W}")
+    print(f"{'-' * _W}")
 
 
-def _run(cmd: list[str], label: str) -> int:
+def _run(cmd: list[str], label: str, env: dict[str, str] | None = None) -> int:
     _hdr(label)
-    result = subprocess.run(cmd, cwd=str(SCRIPT_DIR))
+    run_env = os.environ.copy()
+    if env:
+        run_env.update(env)
+    result = subprocess.run(cmd, cwd=str(SCRIPT_DIR), env=run_env)
     return result.returncode
 
 
@@ -186,71 +197,138 @@ def main() -> None:
         print("  Proceeding to final analytics.")
 
     # ── Step 4: Write review sheets into merged_master.xlsx ───────────────────
-    if complete or args.force:
-        if DECISIONS_JSON.exists():
-            rc = _run([sys.executable, str(REVIEW_PY), "--write"], "Step 4a — write Claude Review sheet")
-            if rc != 0:
-                print(f"\nWARNING: Claude --write failed (exit {rc}). Claude Review sheet may be stale.")
+    if complete:
+        if WORKBOOK_LOCK.exists():
+            print(f"\n[4] Write review sheets: SKIPPED — workbook appears locked by {WORKBOOK_LOCK.name}.")
         else:
-            print(f"\n[4a] Write Claude sheet: SKIPPED — {DECISIONS_JSON.name} does not exist.")
+            if DECISIONS_JSON.exists():
+                rc = _run([sys.executable, str(REVIEW_PY), "--write"], "Step 4a — write Claude Review sheet")
+                if rc != 0:
+                    print(f"\nWARNING: Claude --write failed (exit {rc}). Claude Review sheet may be stale.")
+            else:
+                print(f"\n[4a] Write Claude sheet: SKIPPED — {DECISIONS_JSON.name} does not exist.")
 
-        codex_decisions = SCRIPT_DIR / "codex_aigenticHumanReview" / "codex_review_workdir" / "codex_review_decisions.json"
-        if codex_decisions.exists():
-            rc = _run([sys.executable, str(CODEX_REVIEW_PY), "--write"], "Step 4b — write Codex Review sheet")
-            if rc != 0:
-                print(f"\nWARNING: Codex --write failed (exit {rc}). Codex Review sheet may be stale.")
-        else:
-            print(f"\n[4b] Write Codex sheet: SKIPPED — {codex_decisions.name} does not exist.")
+            codex_decisions = SCRIPT_DIR / "codex_aigenticHumanReview" / "codex_review_workdir" / "codex_review_decisions.json"
+            if codex_decisions.exists():
+                rc = _run([sys.executable, str(CODEX_REVIEW_PY), "--write"], "Step 4b — write Codex Review sheet")
+                if rc != 0:
+                    print(f"\nWARNING: Codex --write failed (exit {rc}). Codex Review sheet may be stale.")
+            else:
+                print(f"\n[4b] Write Codex sheet: SKIPPED — {codex_decisions.name} does not exist.")
     else:
-        print(f"\n[4] Write review sheets: SKIPPED — dual review incomplete (use --force for preview).")
+        print(f"\n[4] Write review sheets: SKIPPED — final workbook write only runs after dual review completion.")
 
     # ── Step 5a: Merged condition comparison charts ───────────────────────────
-    rc_merged = _run(
-        [sys.executable, str(VIZ_PY), "--merged", str(MERGED_XLSX)],
-        "Step 5a — merged condition comparison charts",
-    )
+    rc_analysis_export = 0
+    if complete or args.force:
+        rc_analysis_export = _run(
+            [sys.executable, str(REVIEW_ANALYSIS_PY)],
+            "Step 5 — build shared review-analysis exports",
+        )
+        if rc_analysis_export != 0:
+            print(f"\nWARNING: review-analysis export failed (exit {rc_analysis_export}).")
+    else:
+        print(f"\n[5] Review analysis export: SKIPPED — dual review incomplete (use --force for preview).")
 
-    # ── Step 5b: Claude review charts ────────────────────────────────────────
-    review_charts_rendered = False
-    if DECISIONS_JSON.exists() and (complete or args.force):
+    # ── Step 6a: Retire ambiguous merged dashboards ──────────────────────────
+    rc_merged = 0
+    merged_out = MERGED_XLSX.parent / "merged"
+    merged_charts_dir = merged_out / "charts"
+    merged_dash = merged_out / "dashboard.png"
+    merged_claude_final = merged_out / "dashboard_claude_final.png"
+    if merged_charts_dir.exists():
+        for stale_png in merged_charts_dir.glob("*.png"):
+            stale_png.unlink()
+    for stale in [merged_dash, merged_claude_final]:
+        if stale.exists():
+            stale.unlink()
+    print(f"\n[6a] Merged condition dashboards: SKIPPED — retired until semantics are redesigned.")
+
+    if REVIEW_ANALYSIS_CHARTS_DIR.exists():
+        for stale_png in REVIEW_ANALYSIS_CHARTS_DIR.glob("*.png"):
+            stale_png.unlink()
+    for stale_dir in [REVIEW_ANALYSIS_DIR / "claude_review", REVIEW_ANALYSIS_DIR / "codex_review"]:
+        if stale_dir.exists():
+            shutil.rmtree(stale_dir)
+    stale_review_dashboard = REVIEW_ANALYSIS_DIR / "dashboard_review_analysis.png"
+    if stale_review_dashboard.exists():
+        stale_review_dashboard.unlink()
+
+    # ── Step 6b: Claude review charts ────────────────────────────────────────
+    claude_review_charts_rendered = False
+    if DECISIONS_JSON.exists() and complete:
         rc_review = _run(
             [sys.executable, str(VIZ_PY), "--claude-review", str(DECISIONS_JSON)],
-            "Step 5b — Claude review charts",
+            "Step 6b — Claude review charts",
+            env={"DOMAINRAG_REVIEW_DIR": str(REVIEW_ANALYSIS_CHARTS_DIR)},
         )
-        review_charts_rendered = rc_review == 0
+        claude_review_charts_rendered = rc_review == 0
     else:
         rc_review = 0
         if not DECISIONS_JSON.exists():
-            print(f"\n[5b] Claude review charts: SKIPPED — {DECISIONS_JSON.name} does not exist.")
+            print(f"\n[6b] Claude review charts: SKIPPED — {DECISIONS_JSON.name} does not exist.")
         else:
-            print(f"\n[5b] Claude review charts: SKIPPED — review incomplete (use --force for preview).")
+            print(f"\n[6b] Claude review charts: SKIPPED — final lane-local review charts only run after dual review completion.")
+
+    # ── Step 6c: Codex review charts ─────────────────────────────────────────
+    codex_review_charts_rendered = False
+    codex_decisions = SCRIPT_DIR / "codex_aigenticHumanReview" / "codex_review_workdir" / "codex_review_decisions.json"
+    if codex_decisions.exists() and complete:
+        rc_codex_review = _run(
+            [sys.executable, str(VIZ_PY), "--codex-review", str(codex_decisions)],
+            "Step 6c — Codex review charts",
+            env={"DOMAINRAG_REVIEW_DIR": str(REVIEW_ANALYSIS_CHARTS_DIR)},
+        )
+        codex_review_charts_rendered = rc_codex_review == 0
+    else:
+        rc_codex_review = 0
+        if not codex_decisions.exists():
+            print(f"\n[6c] Codex review charts: SKIPPED — {codex_decisions.name} does not exist.")
+        else:
+            print(f"\n[6c] Codex review charts: SKIPPED — final lane-local review charts only run after dual review completion.")
+
+    # ── Step 6d: Shared review-analysis charts ───────────────────────────────
+    review_analysis_charts_rendered = False
+    if rc_analysis_export == 0 and REVIEW_ANALYSIS_DIR.exists():
+        rc_review_analysis = _run(
+            [sys.executable, str(VIZ_PY), "--review-analysis", str(REVIEW_ANALYSIS_DIR)],
+            "Step 6d — shared review-analysis charts",
+        )
+        review_analysis_charts_rendered = rc_review_analysis == 0
+    else:
+        rc_review_analysis = 0
+        print(f"\n[6d] Review analysis charts: SKIPPED — exports not available.")
 
     # ── Summary ───────────────────────────────────────────────────────────────
-    merged_out = MERGED_XLSX.parent / "merged"
-    review_out = review_output_root()
-
     print(f"\n{'=' * _W}")
     errors = []
-    if rc_merged != 0:
-        errors.append(f"merged charts: exit {rc_merged}")
+    if rc_analysis_export != 0:
+        errors.append(f"review-analysis export: exit {rc_analysis_export}")
     if rc_review != 0:
-        errors.append(f"review charts: exit {rc_review}")
+        errors.append(f"claude review charts: exit {rc_review}")
+    if rc_codex_review != 0:
+        errors.append(f"codex review charts: exit {rc_codex_review}")
+    if rc_review_analysis != 0:
+        errors.append(f"review-analysis charts: exit {rc_review_analysis}")
 
     if errors:
         print(f"  DONE with errors — {', '.join(errors)}")
-    elif complete and review_charts_rendered:
+    elif complete and claude_review_charts_rendered and codex_review_charts_rendered:
         print("  DONE — study finalization complete.")
-    elif complete and not review_charts_rendered:
-        print("  DONE — merged charts complete. Review charts were not rendered.")
+    elif complete and (not claude_review_charts_rendered or not codex_review_charts_rendered):
+        print("  DONE — one or more lane-local review dashboards were not rendered.")
     elif args.force:
         print("  DONE — preview charts rendered (review was incomplete).")
         print("  Re-run without --force once review is complete.")
     else:
         print("  DONE.")
 
-    print(f"  Merged charts : {merged_out}")
-    if review_charts_rendered:
-        print(f"  Review charts : {review_out}")
+    if claude_review_charts_rendered:
+        print(f"  Claude review charts : {REVIEW_ANALYSIS_CHARTS_DIR}")
+    if codex_review_charts_rendered:
+        print(f"  Codex review charts : {REVIEW_ANALYSIS_CHARTS_DIR}")
+    if review_analysis_charts_rendered:
+        print(f"  Review analysis : {REVIEW_ANALYSIS_CHARTS_DIR}")
     print("=" * _W)
 
 

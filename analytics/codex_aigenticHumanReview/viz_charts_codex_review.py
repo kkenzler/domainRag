@@ -9,16 +9,20 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent.parent))  # analytics root — for viz_conditions, viz_theme
 
-from viz_conditions import condition_color_map, condition_label, ordered_conditions
+from viz_conditions import condition_color_map, ordered_conditions, review_condition_label
 from viz_theme import AXIS_BG, DEC_COLORS, DIFF_COLORS, GRID_COL, TEXT_COL, TITLE_COL, style_ax
 
 
 CR_AGREE_COLORS = {"True": "#4CAF50", "Partial": "#FF9800", "False": "#F44336"}
 
 
+def _review_labels(conds: list[str]) -> list[str]:
+    return [review_condition_label(cond, "codex") for cond in conds]
+
+
 def decisions_bar(ax, by_cond: dict):
     conds = list(by_cond.keys())
-    labels = [c.replace("/", "/\n") for c in conds]
+    labels = _review_labels(conds)
     bottoms = np.zeros(len(conds))
     for dec in ["ACCEPT", "REVISE", "REJECT"]:
         pcts = [sum(1 for it in by_cond[c] if it["review_decision"] == dec) / len(by_cond[c]) * 100 for c in conds]
@@ -27,7 +31,7 @@ def decisions_bar(ax, by_cond: dict):
             if pct > 6:
                 ax.text(bar.get_x() + bar.get_width() / 2, bar.get_y() + bar.get_height() / 2, f"{pct:.0f}%", ha="center", va="center", color="white", fontsize=8, fontweight="bold")
         bottoms += np.array(pcts)
-    style_ax(ax, "Codex Decisions by Condition", "% of items")
+    style_ax(ax, "Codex Decisions by Generation Condition", "% of items")
     ax.set_ylim(0, 110)
     ax.legend(fontsize=8, labelcolor=TEXT_COL, framealpha=0.2, loc="upper right")
 
@@ -45,14 +49,14 @@ def score_bars(ax, by_cond: dict):
         for bar, v in zip(bars, means):
             ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.05, f"{v:.2f}", ha="center", va="bottom", color=TEXT_COL, fontsize=7)
     ax.set_xticks(x)
-    ax.set_xticklabels([c.replace("/", "/\n") for c in conds], fontsize=8)
+    ax.set_xticklabels(_review_labels(conds), fontsize=8)
     ax.set_ylim(1, 5.5)
-    style_ax(ax, "Mean Codex Scores by Condition", "Score (1–5)")
+    style_ax(ax, "Mean Codex Scores by Generation Condition", "Score (1–5)")
     ax.legend(fontsize=8, labelcolor=TEXT_COL, framealpha=0.2)
 
 
 def agreement_bar(ax, by_cond: dict):
-    conds = list(by_cond.keys())
+    conds = [c for c in by_cond.keys() if any(it.get("reviewer_decision") not in {None, ""} for it in by_cond[c])]
     label_map = [("True", "Agrees"), ("Partial", "Partial"), ("False", "Disagrees")]
     x = np.arange(len(conds))
     w = 0.24
@@ -63,8 +67,8 @@ def agreement_bar(ax, by_cond: dict):
             if pct > 5:
                 ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.4, f"{pct:.0f}%", ha="center", va="bottom", color=TEXT_COL, fontsize=7)
     ax.set_xticks(x)
-    ax.set_xticklabels([c.replace("/", "/\n") for c in conds], fontsize=8)
-    style_ax(ax, "Agreement with Human Reviewer", "% of items")
+    ax.set_xticklabels(_review_labels(conds), fontsize=8)
+    style_ax(ax, "Codex Agreement with Human Reviewer Baseline (non-GPT rows)", "% of items with reviewer baseline")
     ax.legend(fontsize=8, labelcolor=TEXT_COL, framealpha=0.2)
 
 
@@ -72,10 +76,10 @@ def flag_bar(ax, by_cond: dict):
     conds = list(by_cond.keys())
     colors = condition_color_map(conds)
     rates = [sum(1 for it in by_cond[c] if it.get("flag_ambiguity") is True) / len(by_cond[c]) * 100 for c in conds]
-    bars = ax.bar([c.replace("/", "/\n") for c in conds], rates, color=[colors[c] for c in conds], width=0.55)
+    bars = ax.bar(_review_labels(conds), rates, color=[colors[c] for c in conds], width=0.55)
     for bar, rate in zip(bars, rates):
         ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.3, f"{rate:.1f}%", ha="center", va="bottom", color=TEXT_COL, fontsize=9)
-    style_ax(ax, "Ambiguity Flag Rate by Condition", "% flagged")
+    style_ax(ax, "Ambiguity Flag Rate by Generation Condition", "% flagged")
     ax.set_ylim(0, max(rates) * 1.35 + 2)
 
 
@@ -91,11 +95,11 @@ def decision_heatmap(ax, items: list):
     ax.set_xticks(range(len(diffs)))
     ax.set_xticklabels(diffs, color=TEXT_COL, fontsize=9)
     ax.set_yticks(range(len(conds)))
-    ax.set_yticklabels([condition_label(c) for c in conds], color=TEXT_COL, fontsize=9)
+    ax.set_yticklabels([review_condition_label(c, "codex") for c in conds], color=TEXT_COL, fontsize=9)
     for i in range(len(conds)):
         for j in range(len(diffs)):
-            ax.text(j, i, f"{matrix[i,j]:.0f}%", ha="center", va="center", color="black" if matrix[i, j] > 50 else "white", fontsize=10, fontweight="bold")
-    ax.set_title("ACCEPT Rate  (condition × difficulty)", color=TITLE_COL, fontsize=11, fontweight="bold", pad=8)
+            ax.text(j, i, f"{matrix[i,j]:.0f}%", ha="center", va="center", color="black", fontsize=10, fontweight="bold")
+    ax.set_title("Codex ACCEPT Rate  (generation condition x difficulty)", color=TITLE_COL, fontsize=11, fontweight="bold", pad=8)
     plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04).ax.yaxis.set_tick_params(color=TEXT_COL)
 
 
@@ -112,11 +116,11 @@ def score_heatmap(ax, by_cond: dict):
     ax.set_xticks(range(len(metrics)))
     ax.set_xticklabels(mlabels, color=TEXT_COL, fontsize=9)
     ax.set_yticks(range(len(conds)))
-    ax.set_yticklabels(conds, color=TEXT_COL, fontsize=9)
+    ax.set_yticklabels([review_condition_label(c, "codex") for c in conds], color=TEXT_COL, fontsize=9)
     for i in range(len(conds)):
         for j in range(len(metrics)):
-            ax.text(j, i, f"{matrix[i,j]:.2f}", ha="center", va="center", color="black" if matrix[i, j] > 3.5 else "white", fontsize=10, fontweight="bold")
-    ax.set_title("Mean Codex Score  (condition × metric)", color=TITLE_COL, fontsize=11, fontweight="bold", pad=8)
+            ax.text(j, i, f"{matrix[i,j]:.2f}", ha="center", va="center", color="black", fontsize=10, fontweight="bold")
+    ax.set_title("Mean Codex Score  (generation condition x metric)", color=TITLE_COL, fontsize=11, fontweight="bold", pad=8)
     plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04).ax.yaxis.set_tick_params(color=TEXT_COL)
 
 
@@ -138,9 +142,9 @@ def qc_flags_bar(ax, by_cond: dict):
             if pct > 5:
                 ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5, f"{pct:.0f}", ha="center", va="bottom", color=TEXT_COL, fontsize=6)
     ax.set_xticks(x)
-    ax.set_xticklabels([c.replace("/", "/\n") for c in conds], fontsize=8)
+    ax.set_xticklabels(_review_labels(conds), fontsize=8)
     ax.set_ylim(0, 115)
-    style_ax(ax, "QC Traceability  (% items passing each flag)", "% True")
+    style_ax(ax, "Codex QC Traceability  (% items passing each flag)", "% True")
     ax.legend(fontsize=7, labelcolor=TEXT_COL, framealpha=0.2, ncol=2)
 
 
@@ -162,8 +166,8 @@ def reject_breakdown(ax, by_cond: dict):
             if cnt > 0:
                 ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.1, str(cnt), ha="center", va="bottom", color=TEXT_COL, fontsize=8)
     ax.set_xticks(x)
-    ax.set_xticklabels([c.replace("/", "/\n") for c in conds], fontsize=8)
-    style_ax(ax, "REJECT Count by Condition × Difficulty", "# rejected")
+    ax.set_xticklabels(_review_labels(conds), fontsize=8)
+    style_ax(ax, "Codex REJECT Count by Review Condition x Difficulty", "# rejected")
     ax.legend(fontsize=8, labelcolor=TEXT_COL, framealpha=0.2, title="Difficulty", title_fontsize=8)
 
 
@@ -179,7 +183,7 @@ def score_boxplot(ax, by_cond: dict, metric: str, title: str):
         for item in bp[element]:
             item.set_color(TEXT_COL)
     ax.set_xticks(range(1, len(conds) + 1))
-    ax.set_xticklabels([c.replace("/", "/\n") for c in conds], fontsize=8)
+    ax.set_xticklabels(_review_labels(conds), fontsize=8)
     ax.set_ylim(0.5, 5.5)
     ax.set_yticks([1, 2, 3, 4, 5])
     style_ax(ax, title, "Score (1–5)")
@@ -214,9 +218,9 @@ def radar_by_condition(ax, by_cond: dict):
             raw = [it[field] for it in by_cond[cond] if it[field] is not None]
             vals.append((np.mean(raw) - 1) / 4 if raw else 0)
         vals += [vals[0]]
-        ax.plot(angles, vals, linewidth=2, color=colors[cond], label=cond)
+        ax.plot(angles, vals, linewidth=2, color=colors[cond], label=review_condition_label(cond, "codex"))
         ax.fill(angles, vals, alpha=0.15, color=colors[cond])
-    ax.set_title("Score Radar by Condition", color=TITLE_COL, fontsize=11, fontweight="bold", pad=18)
+    ax.set_title("Codex Score Radar by Generation Condition", color=TITLE_COL, fontsize=11, fontweight="bold", pad=18)
     ax.legend(loc="lower left", bbox_to_anchor=(-0.25, -0.12), fontsize=7, labelcolor=TEXT_COL, framealpha=0.2)
 
 
@@ -241,7 +245,7 @@ def accept_vs_match(ax, by_cond: dict):
         for bar, v in zip(bars, vals):
             ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.8, f"{v:.0f}%", ha="center", va="bottom", color=TEXT_COL, fontsize=8)
     ax.set_xticks(x)
-    ax.set_xticklabels([c.replace("/", "/\n") for c in conds], fontsize=8)
+    ax.set_xticklabels(_review_labels(conds), fontsize=8)
     ax.set_ylim(0, 115)
-    style_ax(ax, "ACCEPT Rate vs Difficulty Match", "% of items")
+    style_ax(ax, "Codex ACCEPT Rate vs Difficulty Match", "% of items")
     ax.legend(fontsize=8, labelcolor=TEXT_COL, framealpha=0.2)
