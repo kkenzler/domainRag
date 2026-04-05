@@ -45,6 +45,11 @@ Transient/staging:
 - `.mplconfig`
   - Matplotlib runtime config/cache used to keep chart rendering writable inside the repo-local workspace
 
+Historical/non-canonical:
+- `_custom_batch_studies`
+  - historical study-control outputs from earlier iterations
+  - currently not read by the active merge/finalization path
+
 ### Script relationships
 
 Generation/archive:
@@ -118,6 +123,8 @@ Canonical review-analysis output root:
 
 Canonical chart output root:
 - `merged\review_analysis\charts`
+- this folder is now intentionally pruned to a smaller final review surface
+- retired diagnostics should not be reintroduced casually; add them back only if they answer a concrete operator question
 
 ### Current design constraints
 
@@ -152,4 +159,3 @@ Canonical chart output root:
 - simplify top-level analytics surfaces
 - formalize small-study mode under a cleaner study-root structure
 - define a strict no-external-endpoints mode for confidential corpora
-

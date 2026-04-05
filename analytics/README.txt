@@ -28,6 +28,9 @@ Main folders
   - Codex review lane workflow and repo-local review workdir
 - `merged`
   - derived merged outputs and review-analysis exports
+- `_custom_batch_studies`
+  - historical batch-control outputs from earlier study iterations
+  - not part of the current canonical end-to-end path
 
 Important files
 - `merged_master.xlsx`
@@ -38,6 +41,7 @@ Important files
 Current output surface
 - active review charts render to:
   - `analytics\merged\review_analysis\charts`
+- that chart folder is now intentionally pruned to the smaller final review surface rather than the full diagnostic bundle
 
 Typical operator flow
 1. Run generation/archive through `run_batches.py` or the canonical wrapper that calls it.
@@ -55,4 +59,3 @@ Notes
 - `analytics\runs` is transient staging only when active. Finished study state should live in the tracked archive folders, not there.
 - For confidential corpus work, a stricter local-only path still needs to be formalized. See:
   - `C:\Users\kadek\source\LAST_PHASE_PLAN.md`
-

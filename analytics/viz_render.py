@@ -269,16 +269,10 @@ def run_claude_review_mode(decisions_json: Path, out_dir: Path) -> None:
         ("01_decisions_by_condition", lambda ax: cr_decisions_bar(ax, by_cond), 8, 5.5, False),
         ("02_scores_by_condition", lambda ax: cr_score_bars(ax, by_cond), 9, 5.5, False),
         ("03_agreement_with_reviewer", lambda ax: cr_agreement_bar(ax, by_cond), 8, 5.5, False),
-        ("04_flag_rate", lambda ax: cr_flag_bar(ax, by_cond), 7, 5.0, False),
-        ("05_decision_heatmap", lambda ax: cr_decision_heatmap(ax, items), 7, 4.5, False),
-        ("06_score_heatmap", lambda ax: cr_score_heatmap(ax, by_cond), 7, 4.5, False),
-        ("07_qc_flags", lambda ax: cr_qc_flags_bar(ax, by_cond), 10, 5.5, False),
-        ("08_reject_breakdown", lambda ax: cr_reject_breakdown(ax, by_cond), 9, 5.5, False),
-        ("09_alignment_boxplot", lambda ax: cr_score_boxplot(ax, by_cond, "claude_source_alignment", "Source Alignment Distribution"), 8, 5.5, False),
-        ("10_distractor_boxplot", lambda ax: cr_score_boxplot(ax, by_cond, "claude_distractor_quality", "Distractor Quality Distribution"), 8, 5.5, False),
-        ("11_clarity_boxplot", lambda ax: cr_score_boxplot(ax, by_cond, "claude_stem_clarity", "Stem Clarity Distribution"), 8, 5.5, False),
-        ("12_radar_by_condition", lambda ax: cr_radar_by_condition(ax, by_cond), 7, 6.0, True),
-        ("13_accept_vs_match", lambda ax: cr_accept_vs_match(ax, by_cond), 8, 5.5, False),
+        ("04_decision_heatmap", lambda ax: cr_decision_heatmap(ax, items), 7, 4.5, False),
+        ("05_score_heatmap", lambda ax: cr_score_heatmap(ax, by_cond), 7, 4.5, False),
+        ("06_qc_flags", lambda ax: cr_qc_flags_bar(ax, by_cond), 10, 5.5, False),
+        ("07_radar_by_condition", lambda ax: cr_radar_by_condition(ax, by_cond), 7, 6.0, True),
     ]
 
     for slug, fn, w, h, polar in chart_specs:
@@ -290,21 +284,17 @@ def run_claude_review_mode(decisions_json: Path, out_dir: Path) -> None:
         plt.close(fig)
         print(f"  chart: {path.name}")
 
-    fig = plt.figure(figsize=(28, 18))
+    fig = plt.figure(figsize=(22, 14))
     fig.patch.set_facecolor(BG)
-    gs = gridspec.GridSpec(3, 4, figure=fig, hspace=0.55, wspace=0.40, left=0.05, right=0.97, top=0.93, bottom=0.05)
+    gs = gridspec.GridSpec(2, 4, figure=fig, hspace=0.55, wspace=0.40, left=0.05, right=0.97, top=0.92, bottom=0.06)
     cr_decisions_bar(fig.add_subplot(gs[0, 0]), by_cond)
     cr_score_bars(fig.add_subplot(gs[0, 1]), by_cond)
     cr_agreement_bar(fig.add_subplot(gs[0, 2]), by_cond)
-    cr_flag_bar(fig.add_subplot(gs[0, 3]), by_cond)
-    cr_decision_heatmap(fig.add_subplot(gs[1, 0]), items)
-    cr_score_heatmap(fig.add_subplot(gs[1, 1]), by_cond)
-    cr_qc_flags_bar(fig.add_subplot(gs[1, 2]), by_cond)
-    cr_reject_breakdown(fig.add_subplot(gs[1, 3]), by_cond)
-    cr_score_boxplot(fig.add_subplot(gs[2, 0]), by_cond, "claude_source_alignment", "Source Alignment Distribution")
-    cr_score_boxplot(fig.add_subplot(gs[2, 1]), by_cond, "claude_distractor_quality", "Distractor Quality Distribution")
-    cr_radar_by_condition(fig.add_subplot(gs[2, 2], polar=True), by_cond)
-    cr_accept_vs_match(fig.add_subplot(gs[2, 3]), by_cond)
+    cr_decision_heatmap(fig.add_subplot(gs[0, 3]), items)
+    cr_score_heatmap(fig.add_subplot(gs[1, 0]), by_cond)
+    cr_qc_flags_bar(fig.add_subplot(gs[1, 1]), by_cond)
+    cr_radar_by_condition(fig.add_subplot(gs[1, 2], polar=True), by_cond)
+    cr_flag_bar(fig.add_subplot(gs[1, 3]), by_cond)
     total_items = len(items)
     fig.suptitle(f"domainRag  —  Agentic Human Review  ({total_items} items  ·  {len(by_cond)} conditions)", color=TITLE_COL, fontsize=13, fontweight="bold", y=0.965)
     dash = out_dir / "dashboard_claude_review.png"
@@ -326,16 +316,10 @@ def run_codex_review_mode(decisions_json: Path, out_dir: Path) -> None:
         ("01_decisions_by_condition", lambda ax: cx_decisions_bar(ax, by_cond), 8, 5.5, False),
         ("02_scores_by_condition", lambda ax: cx_score_bars(ax, by_cond), 9, 5.5, False),
         ("03_agreement_with_reviewer", lambda ax: cx_agreement_bar(ax, by_cond), 8, 5.5, False),
-        ("04_flag_rate", lambda ax: cx_flag_bar(ax, by_cond), 7, 5.0, False),
-        ("05_decision_heatmap", lambda ax: cx_decision_heatmap(ax, items), 7, 4.5, False),
-        ("06_score_heatmap", lambda ax: cx_score_heatmap(ax, by_cond), 7, 4.5, False),
-        ("07_qc_flags", lambda ax: cx_qc_flags_bar(ax, by_cond), 10, 5.5, False),
-        ("08_reject_breakdown", lambda ax: cx_reject_breakdown(ax, by_cond), 9, 5.5, False),
-        ("09_alignment_boxplot", lambda ax: cx_score_boxplot(ax, by_cond, "review_source_alignment", "Source Alignment Distribution"), 8, 5.5, False),
-        ("10_distractor_boxplot", lambda ax: cx_score_boxplot(ax, by_cond, "review_distractor_quality", "Distractor Quality Distribution"), 8, 5.5, False),
-        ("11_clarity_boxplot", lambda ax: cx_score_boxplot(ax, by_cond, "review_stem_clarity", "Stem Clarity Distribution"), 8, 5.5, False),
-        ("12_radar_by_condition", lambda ax: cx_radar_by_condition(ax, by_cond), 7, 6.0, True),
-        ("13_accept_vs_match", lambda ax: cx_accept_vs_match(ax, by_cond), 8, 5.5, False),
+        ("04_decision_heatmap", lambda ax: cx_decision_heatmap(ax, items), 7, 4.5, False),
+        ("05_score_heatmap", lambda ax: cx_score_heatmap(ax, by_cond), 7, 4.5, False),
+        ("06_qc_flags", lambda ax: cx_qc_flags_bar(ax, by_cond), 10, 5.5, False),
+        ("07_radar_by_condition", lambda ax: cx_radar_by_condition(ax, by_cond), 7, 6.0, True),
     ]
 
     for slug, fn, w, h, polar in chart_specs:
@@ -347,21 +331,17 @@ def run_codex_review_mode(decisions_json: Path, out_dir: Path) -> None:
         plt.close(fig)
         print(f"  chart: {path.name}")
 
-    fig = plt.figure(figsize=(28, 18))
+    fig = plt.figure(figsize=(22, 14))
     fig.patch.set_facecolor(BG)
-    gs = gridspec.GridSpec(3, 4, figure=fig, hspace=0.55, wspace=0.40, left=0.05, right=0.97, top=0.93, bottom=0.05)
+    gs = gridspec.GridSpec(2, 4, figure=fig, hspace=0.55, wspace=0.40, left=0.05, right=0.97, top=0.92, bottom=0.06)
     cx_decisions_bar(fig.add_subplot(gs[0, 0]), by_cond)
     cx_score_bars(fig.add_subplot(gs[0, 1]), by_cond)
     cx_agreement_bar(fig.add_subplot(gs[0, 2]), by_cond)
-    cx_flag_bar(fig.add_subplot(gs[0, 3]), by_cond)
-    cx_decision_heatmap(fig.add_subplot(gs[1, 0]), items)
-    cx_score_heatmap(fig.add_subplot(gs[1, 1]), by_cond)
-    cx_qc_flags_bar(fig.add_subplot(gs[1, 2]), by_cond)
-    cx_reject_breakdown(fig.add_subplot(gs[1, 3]), by_cond)
-    cx_score_boxplot(fig.add_subplot(gs[2, 0]), by_cond, "review_source_alignment", "Source Alignment Distribution")
-    cx_score_boxplot(fig.add_subplot(gs[2, 1]), by_cond, "review_distractor_quality", "Distractor Quality Distribution")
-    cx_radar_by_condition(fig.add_subplot(gs[2, 2], polar=True), by_cond)
-    cx_accept_vs_match(fig.add_subplot(gs[2, 3]), by_cond)
+    cx_decision_heatmap(fig.add_subplot(gs[0, 3]), items)
+    cx_score_heatmap(fig.add_subplot(gs[1, 0]), by_cond)
+    cx_qc_flags_bar(fig.add_subplot(gs[1, 1]), by_cond)
+    cx_radar_by_condition(fig.add_subplot(gs[1, 2], polar=True), by_cond)
+    cx_flag_bar(fig.add_subplot(gs[1, 3]), by_cond)
     total_items = len(items)
     fig.suptitle(f"domainRag  —  Codex Agentic Review  ({total_items} items  ·  {len(by_cond)} conditions)", color=TITLE_COL, fontsize=13, fontweight="bold", y=0.965)
     dash = out_dir / "dashboard_codex_review.png"
@@ -379,20 +359,16 @@ def run_review_analysis_mode(analysis_dir: Path, out_dir: Path) -> None:
 
     chart_specs = [
         ("01_answer_key_distribution", lambda ax: review_analysis_answer_key_distribution(ax, bundle), 8, 5.5, False),
-        ("02_coverage_heatmap", lambda ax: review_analysis_coverage_heatmap(ax, bundle), 8, 5.5, False),
-        ("03_lane_completion", lambda ax: review_analysis_lane_completion(ax, bundle), 7, 5.5, False),
-        ("04_time_cost", lambda ax: review_analysis_time_cost_bars(ax, bundle), 7, 5.5, False),
-        ("05_failure_modes", lambda ax: review_analysis_failure_modes(ax, bundle), 10, 5.5, False),
-        ("06_lane_decision_mix", lambda ax: review_analysis_lane_decision_mix(ax, bundle), 7, 5.5, False),
-        ("07_reviewer_agreement", lambda ax: review_analysis_reviewer_agreement_rates(ax, bundle), 8, 5.5, False),
-        ("08_reviewer_nonaccept_compare", lambda ax: review_analysis_reviewer_vs_lane_nonaccept(ax, bundle), 8, 5.5, False),
-        ("09_lane_score_comparison", lambda ax: review_analysis_lane_score_comparison(ax, bundle), 8, 5.5, False),
-        ("10_claude_accept_heatmap", lambda ax: review_analysis_lane_accept_heatmap(ax, bundle, "claude", "Claude"), 10, 5.5, False),
-        ("11_codex_accept_heatmap", lambda ax: review_analysis_lane_accept_heatmap(ax, bundle, "codex", "Codex"), 10, 5.5, False),
-        ("12_claude_score_heatmap", lambda ax: review_analysis_lane_score_heatmap(ax, bundle, "claude", "Claude"), 10, 5.5, False),
-        ("13_codex_score_heatmap", lambda ax: review_analysis_lane_score_heatmap(ax, bundle, "codex", "Codex"), 10, 5.5, False),
-        ("14_reviewer_alignment_heatmap", lambda ax: review_analysis_reviewer_alignment_heatmap(ax, bundle), 10, 5.5, False),
-        ("15_data_anomalies", lambda ax: anomaly_counts(ax, bundle), 7, 5.5, False),
+        ("02_failure_modes", lambda ax: review_analysis_failure_modes(ax, bundle), 10, 5.5, False),
+        ("03_lane_decision_mix", lambda ax: review_analysis_lane_decision_mix(ax, bundle), 7, 5.5, False),
+        ("04_reviewer_agreement", lambda ax: review_analysis_reviewer_agreement_rates(ax, bundle), 8, 5.5, False),
+        ("05_lane_score_comparison", lambda ax: review_analysis_lane_score_comparison(ax, bundle), 8, 5.5, False),
+        ("06_claude_accept_heatmap", lambda ax: review_analysis_lane_accept_heatmap(ax, bundle, "claude", "Claude"), 10, 5.5, False),
+        ("07_codex_accept_heatmap", lambda ax: review_analysis_lane_accept_heatmap(ax, bundle, "codex", "Codex"), 10, 5.5, False),
+        ("08_claude_score_heatmap", lambda ax: review_analysis_lane_score_heatmap(ax, bundle, "claude", "Claude"), 10, 5.5, False),
+        ("09_codex_score_heatmap", lambda ax: review_analysis_lane_score_heatmap(ax, bundle, "codex", "Codex"), 10, 5.5, False),
+        ("10_reviewer_alignment_heatmap", lambda ax: review_analysis_reviewer_alignment_heatmap(ax, bundle), 10, 5.5, False),
+        ("11_time_cost", lambda ax: review_analysis_time_cost_bars(ax, bundle), 7, 5.5, False),
     ]
 
     for slug, fn, w, h, polar in chart_specs:
@@ -404,24 +380,20 @@ def run_review_analysis_mode(analysis_dir: Path, out_dir: Path) -> None:
         plt.close(fig)
         print(f"  chart: {path.name}")
 
-    fig = plt.figure(figsize=(22, 26))
+    fig = plt.figure(figsize=(22, 18))
     fig.patch.set_facecolor(BG)
-    gs = gridspec.GridSpec(6, 3, figure=fig, hspace=0.60, wspace=0.42, left=0.05, right=0.97, top=0.95, bottom=0.05)
+    gs = gridspec.GridSpec(4, 3, figure=fig, hspace=0.60, wspace=0.42, left=0.05, right=0.97, top=0.94, bottom=0.06)
     review_analysis_answer_key_distribution(fig.add_subplot(gs[0, 0]), bundle)
-    review_analysis_coverage_heatmap(fig.add_subplot(gs[0, 1]), bundle)
-    review_analysis_lane_completion(fig.add_subplot(gs[0, 2]), bundle)
-    review_analysis_time_cost_bars(fig.add_subplot(gs[1, 0]), bundle)
-    review_analysis_failure_modes(fig.add_subplot(gs[1, 1:]), bundle)
-    review_analysis_lane_decision_mix(fig.add_subplot(gs[2, 0]), bundle)
-    review_analysis_reviewer_agreement_rates(fig.add_subplot(gs[2, 1]), bundle)
-    review_analysis_reviewer_vs_lane_nonaccept(fig.add_subplot(gs[2, 2]), bundle)
-    review_analysis_lane_score_comparison(fig.add_subplot(gs[3, 0]), bundle)
-    review_analysis_lane_accept_heatmap(fig.add_subplot(gs[3, 1]), bundle, "claude", "Claude")
-    review_analysis_lane_accept_heatmap(fig.add_subplot(gs[3, 2]), bundle, "codex", "Codex")
-    review_analysis_lane_score_heatmap(fig.add_subplot(gs[4, 0]), bundle, "claude", "Claude")
-    review_analysis_lane_score_heatmap(fig.add_subplot(gs[4, 1]), bundle, "codex", "Codex")
-    review_analysis_reviewer_alignment_heatmap(fig.add_subplot(gs[5, 0:2]), bundle)
-    anomaly_counts(fig.add_subplot(gs[5, 2]), bundle)
+    review_analysis_failure_modes(fig.add_subplot(gs[0, 1:]), bundle)
+    review_analysis_lane_decision_mix(fig.add_subplot(gs[1, 0]), bundle)
+    review_analysis_reviewer_agreement_rates(fig.add_subplot(gs[1, 1]), bundle)
+    review_analysis_lane_score_comparison(fig.add_subplot(gs[1, 2]), bundle)
+    review_analysis_lane_accept_heatmap(fig.add_subplot(gs[2, 0]), bundle, "claude", "Claude")
+    review_analysis_lane_accept_heatmap(fig.add_subplot(gs[2, 1]), bundle, "codex", "Codex")
+    review_analysis_time_cost_bars(fig.add_subplot(gs[2, 2]), bundle)
+    review_analysis_lane_score_heatmap(fig.add_subplot(gs[3, 0]), bundle, "claude", "Claude")
+    review_analysis_lane_score_heatmap(fig.add_subplot(gs[3, 1]), bundle, "codex", "Codex")
+    review_analysis_reviewer_alignment_heatmap(fig.add_subplot(gs[3, 2]), bundle)
     fig.suptitle("domainRag  —  Review Analysis Dashboard", color=TITLE_COL, fontsize=13, fontweight="bold", y=0.965)
     dash = out_dir / "dashboard_review_analysis.png"
     fig.savefig(dash, dpi=150, bbox_inches="tight", facecolor=BG)
