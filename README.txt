@@ -1,112 +1,221 @@
-domainRag (RAG TestGen)
-=======================
-Generates multiple-choice exam items grounded in domain source material.
-Ingests PDF, PPTX, DOCX, and TXT documents, extracts structured knowledge
-chunks via a local or cloud LLM, embeds them into a vector database, then
-generates and reviews MCQ items with three human-in-the-loop checkpoints.
+domainRag
+=========
+
+Generates multiple-choice items grounded in source documents.
+
+The system:
+- ingests PDF, PPTX, DOCX, TXT, and MD source material
+- extracts structured knowledge chunks
+- embeds those chunks into PostgreSQL + pgvector
+- generates MCQ items with or without retrieval
+- reviews generated items with a second pass
+- writes XLSX outputs for downstream study and analysis
 
 
 HOW TO START
 ------------
-Windows:   Double-click  _run_testGen.bat
-Mac/Linux: ./_run_testGen.sh  (chmod +x required on first use)
-           OR: python3 _rag_testGen/interactive_run.py
+Preferred launcher:
 
-First run: when prompted "Update settings?" enter Y and set all paths and
-model names. Settings are saved to `C:\Users\kadek\secrets\domainRag\config.env`
-by default. Set `DOMAINRAG_CONFIG_ENV` if you want a different local path.
-The repo includes `_rag_testGen/config.env.example` as a safe template only.
+  Windows:   _run_testGen.bat
+  Mac/Linux: ./_run_testGen.sh
+
+Both launch `_rag_testGen/interactive_run.py`.
+
+First run:
+- when prompted to update settings, enter `Y`
+- point the config at the correct corpus, database, and model settings
+
+Persisted config default:
+- `C:\Users\kadek\secrets\domainRag\config.env`
+
+Override:
+- set `DOMAINRAG_CONFIG_ENV` to use a different local config path
+
+Tracked template:
+- `_rag_testGen/config.env.example`
 
 
 PREREQUISITES
 -------------
 1. Python 3.10+
 
-2. Docker Desktop (Linux containers mode):
-   Start the pgvector container (run once, container restarts automatically):
+2. PostgreSQL 17 + pgvector
+
+   Example Docker bootstrap:
 
      docker run --name pgvector17 --restart unless-stopped ^
        -e POSTGRES_PASSWORD=postgres -p 5435:5432 -d pgvector/pgvector:pg17
 
-   Initialize the database (run once):
-
      docker exec -it pgvector17 psql -U postgres -c "CREATE DATABASE kinaxis_ragtestdb;"
 
-3. LM Studio  (https://lmstudio.ai)  -- required for embeddings and local
-   generation/review. Server must be running (green icon, port 1234).
-   Minimum required model:  text-embedding-nomic-embed-text-v1.5@q8_0
-   Context model (PDF vision ingest):  qwen2.5-vl-7b-instruct
-   Generator and reviewer:  qwen2.5-7b-instruct-uncensored (or equivalent)
-   Set LM Studio context window to 32768+ when using the vision model.
+3. LM Studio running on port `1234`
 
-4. API key (optional but recommended for PDF-heavy corpora on low-VRAM hardware).
-   Entering an API key at runtime routes PDF ingest to Anthropic or another
-   cloud provider. The key is never saved to the persisted config file.
+   Typical roles:
+- embeddings: `text-embedding-nomic-embed-text-v1.5`
+- local context / ingest model: vision-capable model for PDFs when using local ingest
+- local generator and reviewer: instruction-tuned text models
 
-5. Python dependencies:
+4. Optional API access for non-local ingest/review/generation
+
+   Notes:
+- `LLM_API_KEY` is read at runtime only
+- it is never written to the persisted config file
+- API routing is optional and can be disabled for local-only runs
+
+5. Python dependencies
 
      pip install requests psycopg pgvector python-docx pypdf python-pptx pymupdf openpyxl
 
 
-USAGE
------
-On startup, interactive_run.py asks:
-  - Update settings? (Y/N) -- review and edit the persisted config values
-  - Run mode:
-      F = Full pipeline    ingest domain folder + generate items (RAG mode)
-      I = Ingest only      extract knowledge chunks, embed, write XLSX preview
-      G = Generate only    use existing DB chunks to generate + review items
-      B = Baseline         no-RAG mode -- load docs directly, no pgvector
+RUN MODES
+---------
+Interactive launcher menu:
 
-Human-in-the-loop checkpoints (each can be disabled in the persisted config):
-  After ingest:      review extracted knowledge chunks, edit or skip any
-  After generation:  review generated items, edit or skip before critic pass
-  After review:      see flagged items, override or correct before final output
+  B  Batch run    generate (from db) + analytics
+  C  Baseline     generate directly from docs, no retrieval
+  P  Pipeline     ingest + generate
+  F  Full         ingest + generate + analytics
+  I  Ingest only  extract knowledge chunks, write XLSX
+  G  Generate     use existing db chunks
+  A  Analytics    visualize the most recent run/finalization surface
+  Q  Query        interactive corpus/DB exploration
+  M  Multi-domain run pipeline across multiple domain/DB pairs
 
-When checkpoints are enabled, the terminal must remain interactive.
+Programmatic entrypoint:
 
-Source documents go in the folder set as DOMAIN_DIR in the persisted config. Supported
-formats: PDF, PPTX, DOCX, TXT.
+  python -m _rag_testGen <command>
 
-Hardware note: PDF vision ingest requires ~8GB VRAM for full GPU speed. On
-hardware with less VRAM (e.g. GTX 1650 4GB), local vision runs on CPU at
-roughly 2 minutes per 4-page batch. For PDF-heavy corpora, routing PDF ingest
-to the Anthropic API is strongly recommended (fast, accurate, low cost).
-PPTX/DOCX/TXT ingest runs fast on any hardware via the local text model.
+Commands:
+- `ingest`
+- `generate`
+- `baseline`
+- `pipeline`
+
+
+OPERATOR FLOW
+-------------
+Single pipeline run:
+1. launch `_run_testGen.bat` or `_run_testGen.sh`
+2. choose `P`, `F`, `I`, `G`, or `C`
+3. complete any enabled checkpoints
+4. inspect the run workbook and logs in the run folder
+
+Comparative study flow:
+1. generate/archive study runs
+2. merge archived runs into `analytics\merged_master.xlsx`
+3. export shared review input
+4. complete both review lanes:
+   - Claude
+   - Codex
+5. finalize the study
+6. inspect:
+   - `analytics\merged_master.xlsx`
+   - `analytics\merged\review_analysis\charts`
+
+
+CONFIGURATION
+-------------
+Important config behavior:
+- `DOMAIN_DIR` points at the corpus folder
+- `RAG_ROOT` controls run-output storage
+- embeddings always stay on LM Studio
+- ingest, generation, and review can each route independently via:
+  - `INGEST_PROVIDER=local|api`
+  - `GENERATE_PROVIDER=local|api`
+  - `REVIEW_PROVIDER=local|api`
+
+Default storage expectation:
+- config in `C:\Users\kadek\secrets\domainRag\config.env`
+- run outputs in `C:\Users\kadek\secrets\domainRag\runs`
 
 
 OUTPUT
 ------
-Each run writes to the secrets-backed run root under
-`C:\Users\kadek\secrets\domainRag\runs\logs_<RUNID>\` by default:
+Default per-run folder:
+- `C:\Users\kadek\secrets\domainRag\runs\logs_<RUN_ID>\`
 
-  run_<RUNID>.xlsx           Multi-sheet workbook:
-                               Run Metadata, DB Snapshot, Chunk Preview,
-                               Items, Reviewer Decisions, Traceability,
-                               Quality Metrics
-  run_manifest_<RUNID>.json  Config snapshot for this run
-  run_info.txt               Settings and timing summary
-  console_pipeline.txt       Captured stdout (when checkpoints disabled)
-  llm_http.jsonl             Per-request LLM log (provider, model, elapsed_ms)
-  lmstudio.log               LM Studio log tail
-  docker_<container>.log     Docker container log tail
+Typical run artifacts:
+- `run_<RUN_ID>.xlsx`
+- `run_manifest_<RUN_ID>.json`
+- `run_info.txt`
+- `console_*.txt`
+- `llm_http.jsonl`
+- `lmstudio.log`
+- `docker_<container>.log`
+
+Typical workbook sheets:
+- Run Metadata
+- DB Snapshot
+- Chunk Preview
+- Items
+- Reviewer Decisions
+- Traceability
+- Quality Metrics
+
+
+ANALYTICS
+---------
+`analytics\` is the study workspace.
+
+Key surfaces:
+- `example1_local-local`
+- `example1_haikuPermutations`
+- `example1_gptBaseline`
+- `claude_aigenticHumanReview`
+- `codex_aigenticHumanReview`
+- `merged`
+- `studies`
+
+Important artifacts:
+- `analytics\merged_master.xlsx`
+- `analytics\review_input.json`
+- `analytics\merged\review_analysis\charts`
+
+For smaller repeatable studies:
+
+  python analytics\create_study.py my-study
+
+For confidential local-only scaffolds:
+
+  python analytics\create_study.py my-confidential-study --local-only
+
+
+LOCAL-ONLY / CONFIDENTIAL MODE
+------------------------------
+Use local-only routing when corpus content must never leave local boundaries:
+- `INGEST_PROVIDER=local`
+- `GENERATE_PROVIDER=local`
+- `REVIEW_PROVIDER=local`
+
+Recommended shape:
+- keep corpus material in secrets-backed local folders
+- keep local config files untracked
+- start confidential studies under `analytics\studies\`
+- do not place corpus-bearing material in tracked repo roots
 
 
 TROUBLESHOOTING
 ---------------
-"Update settings?" -- type Y if this is a new machine or DOMAIN_DIR has moved.
+pgvector connection error:
+- confirm the Docker container is running:
+  `docker ps --filter "name=pgvector17"`
 
-pgvector connection error           Confirm Docker container is running:
-                                    docker ps --filter "name=pgvector17"
+No chunks in DB:
+- run `I`, `P`, or `F` before `G`
 
-LM Studio timeout on PDF ingest     Vision model is running on CPU. Route
-                                    PDFs to Anthropic API instead by setting
-                                    API_PROVIDER=anthropic in the persisted
-                                    config and entering your API key at the
-                                    runtime prompt.
+LM Studio timeout on local PDF ingest:
+- local vision is slow on weaker hardware
+- use API ingest for non-sensitive corpora if needed
 
-Embeddings fail                     Confirm LM Studio is running and
-                                    nomic-embed-text-v1.5 is loaded. Embeddings
-                                    always use LM Studio regardless of provider.
+Checkpoint prompts not appearing:
+- run from an interactive terminal
 
-Checkpoint prompts not appearing    Run from a terminal, not piped to a file.
+Unexpected config/path behavior:
+- update settings at startup and verify `DOMAIN_DIR`, `DB_DSN`, and `RAG_ROOT`
+
+
+MORE DETAIL
+-----------
+- repo architecture and workflow rules: `DEVOPS.md`
+- analytics-specific workflow: `analytics\README.txt`
+- core package internals: `_rag_testGen\DEVOPS.md`
