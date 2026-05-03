@@ -17,6 +17,6 @@ The Codex decision file uses neutral review fields:
 - review_notes
 
 If tooling must point here, set:
-- DOMAINRAG_REVIEW_DIR
-- DOMAINRAG_REVIEW_INPUT_JSON=claude_review_input.json
+- DOMAINRAG_REVIEW_DIR (to this workdir)
 - DOMAINRAG_REVIEW_DECISIONS_JSON=codex_review_decisions.json
+(review input defaults to analytics\review_input.json — do not override it)

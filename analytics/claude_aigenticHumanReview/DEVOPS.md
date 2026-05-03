@@ -11,10 +11,10 @@ review lane.
 
 ## Canonical Paths
 
-- Review input:
-  `C:\Users\kadek\source\repos\domainRag\analytics\claude_aigenticHumanReview\claude_review_workdir\claude_review_input.json`
+- Review input (shared):
+  `analytics\review_input.json`
 - Review decisions:
-  `C:\Users\kadek\source\repos\domainRag\analytics\claude_aigenticHumanReview\claude_review_workdir\claude_review_decisions.json`
+  `analytics\claude_aigenticHumanReview\claude_review_workdir\claude_review_decisions.json`
 
 ---
 

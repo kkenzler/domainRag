@@ -18,6 +18,9 @@ relaunch friction.
 - `codex_review_resume_prompt.md`
 - `queue_codex_review_resume.ps1`
 - `supervise_codex_review_queue.ps1`
+- `start_codex_review_supervisor.bat`
+- `watch_codex_review_supervisor.ps1`
+- `viz_charts_codex_review.py`
 - `codex_review_supervisor_state.json` when the supervisor is running
 - `CODEX_REVIEW_WORKFLOW.md`
 
