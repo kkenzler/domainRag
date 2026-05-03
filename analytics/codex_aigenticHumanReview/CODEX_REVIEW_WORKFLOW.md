@@ -7,18 +7,12 @@ Use this workflow when Codex is doing true manual review over the exported
 
 ## Why This Exists
 
-The canonical review export and decision files normally live under:
+The shared review input lives at:
 
-- `C:\Users\kadek\source\repos\domainRag\analytics\claude_aigenticHumanReview\claude_review_workdir\`
+- `C:\Users\kadek\source\repos\domainRag\analytics\review_input.json`
 
-That is outside the normal workspace write root, which causes repeated
+Codex decisions are written into the repo-local Codex workdir to avoid repeated
 permission prompts during long manual review passes.
-
-The fix is:
-
-1. mirror the export into a repo-local workdir
-2. review against the local mirror only
-3. sync the finished decisions back to `secrets` once at the end
 
 An additional control-plane issue showed up during this review:
 
@@ -74,7 +68,6 @@ For Codex manual review, use:
 
 ```powershell
 $env:DOMAINRAG_REVIEW_DIR='C:\Users\kadek\source\repos\domainRag\analytics\codex_aigenticHumanReview\codex_review_workdir'
-$env:DOMAINRAG_REVIEW_INPUT_JSON='claude_review_input.json'
 $env:DOMAINRAG_REVIEW_DECISIONS_JSON='codex_review_decisions.json'
 ```
 
@@ -83,11 +76,9 @@ $env:DOMAINRAG_REVIEW_DECISIONS_JSON='codex_review_decisions.json'
 ## Working Rules
 
 1. Never write batch-by-batch decisions directly into `C:\Users\kadek\secrets`.
-2. Read source items from the local mirror.
+2. Read source items from `analytics\review_input.json`.
 3. Append decisions locally in bounded batches.
 4. Use the local Codex review schema already present in `codex_review_decisions.json`.
-5. Only after the manual pass is complete, copy the finished local decision file
-   back to the canonical secrets review directory if needed.
 
 ---
 
@@ -165,8 +156,6 @@ At the end of the review:
 
 1. verify local review count is complete
 2. optionally write the review sheet/workbook using the local override env vars
-3. copy `codex_review_decisions.json` back to the secrets location if the
-   downstream tooling still expects the canonical external review directory
 
 The unattended queue loop should stop on its own when the supervisor sees the
 target count, which defaults to `1200`.
@@ -181,4 +170,3 @@ target count, which defaults to `1200`.
 - If downstream tooling needs a different review sheet title or a different
   canonical filename, change that deliberately rather than pretending Codex work
   is "Claude review."
-

@@ -113,10 +113,24 @@ Chart families:
   - merged-generation charts
 - `viz_charts_review_analysis.py`
   - shared review-analysis charts
+- `viz_charts_batch.py`
+  - batch-level quality charts (pass rates, schema validity by condition)
+- `viz_charts_metrics.py`
+  - batch answer-key and doc-coverage charts
 - `claude_aigenticHumanReview\viz_charts_claude_review.py`
   - Claude lane-local charts
 - `codex_aigenticHumanReview\viz_charts_codex_review.py`
   - Codex lane-local charts
+
+Supporting viz modules:
+- `viz_costs.py`
+  - cost estimation data used by batch chart rendering
+- `viz_metrics.py`
+  - answer-key and doc-coverage helpers used by metrics chart rendering
+
+Compatibility wrappers:
+- `aigenticHumanReview.py`
+  - analytics-root shim; delegates to `claude_aigenticHumanReview\aigenticHumanReview.py` via runpy
 
 ### Key data surfaces
 

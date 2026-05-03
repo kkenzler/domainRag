@@ -57,8 +57,8 @@ Config persistence, interactive menu, subprocess orchestration, and log capture.
 - Per-run folder: `<RAG_ROOT>\runs\logs_<RUN_ID>\`
 - `run_info.txt`, `console_*.txt`, `llm_http.jsonl`, `lmstudio.log`,
   and docker logs all land in the run folder.
-- Run modes: `F` (full), `P` (pipeline), `I` (ingest), `G` (generate),
-  `B` (batch), `A` (analytics), `Q` (SQL query), `M` (multi-domain).
+- Run modes: `B` (batch), `C` (custom batch), `F` (full), `P` (pipeline),
+  `I` (ingest), `G` (generate), `A` (analytics), `Q` (SQL query), `M` (multi-domain).
 
 ### `ingest.py`
 
