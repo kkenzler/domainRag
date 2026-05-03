@@ -1,8 +1,9 @@
 Codex manual review workdir
 
 Files:
-- claude_review_input.json
 - codex_review_decisions.json
+
+Shared review input lives at analytics\review_input.json — not in this workdir.
 
 This folder exists to keep long manual review passes inside the repo workspace.
 Do not write batch-by-batch decisions directly to the secrets review folder.

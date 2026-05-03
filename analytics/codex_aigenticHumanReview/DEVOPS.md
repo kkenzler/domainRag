@@ -44,5 +44,7 @@ relaunch friction.
 ## Boundaries
 
 - Shared review/export scripts still live at the analytics root.
-- The canonical Claude review lane still lives in the external secrets review
-  directory and is not overwritten by this Codex folder.
+- The canonical Claude review lane lives in
+  `analytics\claude_aigenticHumanReview\claude_review_workdir\` by default.
+  It is not overwritten by this Codex folder.
+  Override with `DOMAINRAG_REVIEW_DIR` if needed.

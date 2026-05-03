@@ -81,7 +81,7 @@ The system outputs XLSX workbooks with:
 
 After automated generation, items are exported for human or agent review. Reviewers make binary accept/revise decisions and provide reason codes.
 
-**Current status (from session 37):** Two parallel review lanes exist:
+**Current status:** Two parallel review lanes exist:
 - Claude review lane
 - Codex review lane
 

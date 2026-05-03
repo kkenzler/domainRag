@@ -72,7 +72,7 @@ RUN MODES
 Interactive launcher menu:
 
   B  Batch run    generate (from db) + analytics
-  C  Baseline     generate directly from docs, no retrieval
+  C  Custom batch  build a batch plan row by row
   P  Pipeline     ingest + generate
   F  Full         ingest + generate + analytics
   I  Ingest only  extract knowledge chunks, write XLSX
