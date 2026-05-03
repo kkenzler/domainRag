@@ -6,12 +6,16 @@ Purpose
 Main entrypoints
 - `run_batches.py`
   - runs unattended generation batches and archives them into the tracked study folders
+- `run_full_study.py`
+  - higher-level end-to-end wrapper for batches, shared review bootstrapping, dual-lane queueing, and finalization
 - `create_study.py`
   - scaffolds a clean small-study root under `analytics\studies\`
 - `merge_runs.py`
   - merges archived study sources into `merged_master.xlsx`
 - `review_export.py`
   - exports shared review items into `review_input.json`
+- `human_review_cycle.py`
+  - bootstraps and checks the shared Claude/Codex review cycle
 - `finalize_study.py`
   - writes review sheets, builds review-analysis exports, and renders charts
 - `analyticsVizs.py`
@@ -58,6 +62,14 @@ Typical operator flow
 6. Inspect:
    - `merged_master.xlsx`
    - `merged\review_analysis\charts`
+
+Higher-level wrapper flow
+- `python analytics\run_full_study.py`
+  - runs batch generation unless skipped
+  - bootstraps shared review input
+  - queues both review lanes
+  - waits for Claude + Codex completion
+  - runs finalization unless skipped
 
 Notes
 - `analytics\runs` is transient staging only when active. Finished study state should live in the tracked archive folders, not there.

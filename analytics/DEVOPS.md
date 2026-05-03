@@ -66,7 +66,7 @@ Generation/archive:
 - `run_batches.py`
   - executes batch generation and archives outputs into the tracked example1 study roots
 - `run_full_study.py`
-  - higher-level study execution wrapper
+  - higher-level end-to-end wrapper for batch execution, dual-lane review orchestration, and finalization
 - `create_study.py`
   - scaffolds smaller study roots under `analytics\studies`
 
@@ -84,13 +84,13 @@ Review lane coordination:
 - `review_workflow.py`
   - progress/count helpers shared by review surfaces
 - `human_review_cycle.py`
-  - shared support for review sequencing
+  - shared bootstrap, queue, status, and completion checks for the Claude/Codex review cycle
 
 Lane-local review writing:
 - `claude_aigenticHumanReview\aigenticHumanReview.py`
   - Claude status, metadata repair, workbook write-back, and lane operations
-- `codex_aigenticHumanReview\...`
-  - Codex lane equivalents
+- `codex_aigenticHumanReview\aigenticHumanReview.py`
+  - Codex bootstrap, status, workbook write-back, and lane operations
 
 Finalization/rendering:
 - `build_review_analysis_exports.py`
