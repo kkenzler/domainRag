@@ -65,8 +65,7 @@ domainRag/
 ├── _run_testGen.sh
 ├── README.txt
 ├── DEVOPS.md
-├── EVALUATION_METHODOLOGY.md
-└── LAST_PHASE_PLAN.md
+└── EVALUATION_METHODOLOGY.md
 ```
 
 ---
@@ -119,7 +118,7 @@ Use the launcher when running interactively.
 
 Interactive menu includes:
 - `B` batch generate + analytics
-- `C` baseline generate directly from docs
+- `C` custom batch build a batch plan row by row
 - `P` pipeline ingest + generate
 - `F` full ingest + generate + analytics
 - `I` ingest only
