@@ -6,6 +6,8 @@ Purpose
 Main entrypoints
 - `run_batches.py`
   - runs unattended generation batches and archives them into the tracked study folders
+- `create_study.py`
+  - scaffolds a clean small-study root under `analytics\studies\`
 - `merge_runs.py`
   - merges archived study sources into `merged_master.xlsx`
 - `review_export.py`
@@ -28,6 +30,8 @@ Main folders
   - Codex review lane workflow and repo-local review workdir
 - `merged`
   - derived merged outputs and review-analysis exports
+- `studies`
+  - canonical home for smaller repeatable study roots and confidential local-only study scaffolds
 - `_custom_batch_studies`
   - historical batch-control outputs from earlier study iterations
   - not part of the current canonical end-to-end path
@@ -57,5 +61,5 @@ Typical operator flow
 
 Notes
 - `analytics\runs` is transient staging only when active. Finished study state should live in the tracked archive folders, not there.
-- For confidential corpus work, a stricter local-only path still needs to be formalized. See:
-  - `C:\Users\kadek\source\LAST_PHASE_PLAN.md`
+- Small-study and confidential-corpus work should start under `analytics\studies\`.
+- Use `python analytics\create_study.py <study-id> --local-only` when corpus material must never leave local endpoints.

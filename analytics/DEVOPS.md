@@ -50,6 +50,16 @@ Historical/non-canonical:
   - historical study-control outputs from earlier iterations
   - currently not read by the active merge/finalization path
 
+Small-study roots:
+- `studies`
+  - canonical home for lighter-weight study roots
+  - each child study root should isolate:
+    - corpus landing/config templates
+    - transient promoted run artifacts
+    - per-study review workdirs
+    - final exports and notes
+  - use `create_study.py` to scaffold these consistently
+
 ### Script relationships
 
 Generation/archive:
@@ -57,6 +67,8 @@ Generation/archive:
   - executes batch generation and archives outputs into the tracked example1 study roots
 - `run_full_study.py`
   - higher-level study execution wrapper
+- `create_study.py`
+  - scaffolds smaller study roots under `analytics\studies`
 
 Merge/export:
 - `merge_runs.py`
@@ -157,5 +169,5 @@ Canonical chart output root:
 
 - prune the final chart set
 - simplify top-level analytics surfaces
-- formalize small-study mode under a cleaner study-root structure
-- define a strict no-external-endpoints mode for confidential corpora
+- keep `analytics\studies` as the canonical small-study surface
+- use per-study local-only templates for confidential corpora

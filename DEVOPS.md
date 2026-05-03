@@ -214,6 +214,16 @@ Current behavior:
 - invokes `analyticsVizs.py`
 - invokes `merge_runs.py` at the end
 
+### `analytics/create_study.py`
+
+Small-study scaffold helper.
+
+Current behavior:
+- creates `analytics\studies\<study_id>\...`
+- writes a per-study `.gitignore`
+- writes a local-only config template
+- separates smaller or confidential studies from the tracked `example1_*` large-study roots
+
 ### `analytics/merge_runs.py`
 
 Builds a merged master workbook from archived batch folders.
@@ -393,6 +403,23 @@ It should not rely on:
 - one historical item count
 - one historical folder name
 
+### Small-Study Mode
+
+Canonical root:
+- `analytics\studies\<study_id>\`
+
+Purpose:
+- isolate smaller repeatable studies from the current large `example1_*` archives
+- keep per-study review workdirs and outputs together
+- provide a safe starting point for confidential corpora
+
+Scaffold command:
+
+```powershell
+python analytics\create_study.py my-study
+python analytics\create_study.py my-confidential-study --local-only
+```
+
 ---
 
 ## Local vs API Guidance
@@ -403,6 +430,12 @@ Use local-only routing when corpus content must remain private:
 - `INGEST_PROVIDER=local`
 - `GENERATE_PROVIDER=local`
 - `REVIEW_PROVIDER=local`
+
+Recommended operator shape:
+- scaffold a study with `python analytics\create_study.py <study-id> --local-only`
+- point `DOMAIN_DIR` at a secrets-backed local corpus path
+- keep any machine-local `.env` file untracked
+- do not place corpus-bearing review exports in tracked large-study roots
 
 ### Mixed Lane
 
