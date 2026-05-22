@@ -1,0 +1,13 @@
+assumption_group,assumption_key,current_value,status,units,intended_use,notes
+review_labor,minutes_per_item,3.0,inherited,minutes/item,"Estimated human review hours and labor cost","Inherited from review_summary_time_cost export logic."
+review_labor,hourly_rate_usd,35.0,inherited,usd/hour,"Estimated human review cost","Inherited from review_summary_time_cost export logic."
+frontier_api,api_cost_per_item_usd,0.0,placeholder,usd/item,"Current review_summary_time_cost comparative API field","Needs replacement or supplementation with a better pipeline-level estimate."
+frontier_api,haiku_stage_ingest_cost_usd,0.054729,derived,usd/run,"Stage-mapped API estimate for ingest","Derived from analytics\\viz_costs.py using Haiku pricing assumptions."
+frontier_api,haiku_stage_generate_cost_usd,0.085564,derived,usd/run,"Stage-mapped API estimate for generate","Derived from analytics\\viz_costs.py using Haiku pricing assumptions."
+frontier_api,haiku_stage_review_cost_usd,0.065220,derived,usd/run,"Stage-mapped API estimate for review","Derived from analytics\\viz_costs.py using Haiku pricing assumptions."
+local_compute,electricity_rate_usd_per_kwh,0.15,first_pass,usd/kWh,"Rough local compute cost estimate","First-pass baseline assumption; replace later with a real local utility assumption if needed."
+local_compute,assumed_average_power_draw_watts,350,first_pass,watts,"Rough local compute cost estimate","First-pass blended system draw assumption for local runs."
+local_compute,local_stage_share_rule,local_stages_divided_by_3,first_pass,text,"Allocate local runtime cost by pipeline stage share","Pipeline stages treated as ingest, generate, review."
+local_compute,include_hardware_amortization,false,deferred,boolean,"Whether to show a second fully loaded local estimate","Default recommendation is electricity-only first."
+presentation,label_local_as_free,false,decided,boolean,"Chart wording constraint","Local should be framed as zero API spend, not literally free."
+presentation,use_review_window_as_active_time,false,decided,boolean,"Chart wording constraint","Observed review window should not be presented as active labor time."

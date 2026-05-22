@@ -1,0 +1,5 @@
+condition,runs,avg_duration_hours,avg_local_compute_usd,avg_api_cost_usd,avg_combined_machine_cost_usd,first_pass_takeaway
+local/local,2,1.4771,0.0775,0.0000,0.0775,"Lowest modeled machine cost; no frontier API spend."
+local/haiku,3,1.5203,0.0532,0.0652,0.1184,"Hybrid path stays relatively cheap while adding one frontier stage."
+haiku/local,3,1.4860,0.0520,0.0856,0.1376,"Frontier generation adds more modeled API cost than frontier review in this first pass."
+haiku/haiku,3,1.7647,0.0309,0.1508,0.1817,"Highest modeled machine cost in the first pass because two stages are frontier-priced."
