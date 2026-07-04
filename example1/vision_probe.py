@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
-# test_vision.py - Quick test for LM Studio vision API.
+# vision_probe.py - Manual probe for the LM Studio vision API (NOT an automated test).
+# Needs a running LM Studio server + PyMuPDF (fitz) + requests + the PDF present.
 #
 # Run from cmd/powershell:
-#   python test_vision.py path\to\Newsboy_Model_with_Pricing.pdf
+#   python vision_probe.py "path\to\Newsboy Model with Pricing.pdf"
 
 import base64, sys, json
 
@@ -21,7 +22,7 @@ def render_page_b64(pdf_path, page_num, dpi):
     pix = page.get_pixmap(dpi=dpi)
     return base64.b64encode(pix.tobytes("png")).decode("utf-8")
 
-def test_vision(pdf_path):
+def run_vision_probe(pdf_path):
     import requests
     print("Rendering page %d of %s at %d DPI..." % (PAGE+1, pdf_path, DPI))
     b64 = render_page_b64(pdf_path, PAGE, DPI)
@@ -51,5 +52,5 @@ def test_vision(pdf_path):
         print(r.text[:2000])
 
 if __name__ == "__main__":
-    pdf = sys.argv[1] if len(sys.argv) > 1 else "Newsboy_Model_with_Pricing.pdf"
-    test_vision(pdf)
+    pdf = sys.argv[1] if len(sys.argv) > 1 else "Newsboy Model with Pricing.pdf"
+    run_vision_probe(pdf)
