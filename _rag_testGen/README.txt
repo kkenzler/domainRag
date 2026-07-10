@@ -53,7 +53,7 @@ Prerequisites
 -------------
 
 - Python 3.10+
-- PostgreSQL 17 + pgvector running (see parent DEVOPS.md for docker bootstrap)
+- PostgreSQL 17 + pgvector running (see `..\_orchestration\DEVOPS.md` for docker bootstrap)
 - LM Studio running on port 1234 (for local embeddings and local generation)
 - openpyxl, psycopg, requests, python-docx, python-pptx (see requirements)
 

@@ -216,6 +216,11 @@ Unexpected config/path behavior:
 
 MORE DETAIL
 -----------
-- repo architecture and workflow rules: `DEVOPS.md`
+- repo architecture and workflow rules: `_orchestration\DEVOPS.md`
 - analytics-specific workflow: `analytics\README.txt`
 - core package internals: `_rag_testGen\DEVOPS.md`
+
+## Technical Context
+
+Detailed operating notes, agent handoffs, and review context live under `_orchestration\`. Start with `_orchestration\DEVOPS.md` when present.
+
