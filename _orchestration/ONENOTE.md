@@ -2,6 +2,7 @@
 onenote_page: repo_domainRag
 repo_path: C:\Users\kadek\source\repos\domainRag
 last_updated: 2026-07-10
+last_synced: 2026-07-11T09:11:05
 ---
 
 # repo_domainRag
