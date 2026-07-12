@@ -94,7 +94,7 @@ CONFIG_LABELS = {
 
 DEFAULTS = {
     "N_ITEMS":              "5",
-    "DB_DSN":               "postgresql://username:password@localhost:5435/your_database",
+    "DB_DSN":               "postgresql://username:***@localhost:5435/your_database",
     "LM_URL":               "http://localhost:1234",
     "DOCKER_CONTAINER":     "pgvector17",
     "API_PROVIDER":         "",
@@ -556,9 +556,34 @@ def _build_row_env(base_values: dict[str, str], row: dict[str, object], log_dir:
     return env
 
 
+# Mask the password in any "scheme://user:***@host" DSN so real database
+# credentials never get persisted into committed batch artifacts (plan/results JSON).
+# Security fix 2026-07-11: batch artifacts previously stored the raw DB_DSN; a public
+# repo + a real remote DSN would have leaked a working credential. See
+# repos/homelab/design/SYSTEM_INVENTORY.md notes / GitHub-security round.
+_DSN_CRED_RE = re.compile(r"://([^:@/\s]+):([^@/\s]+)@")
+
+
+def _redact_dsn_creds(value: object) -> object:
+    if not isinstance(value, str):
+        return value
+    return _DSN_CRED_RE.sub(lambda m: f"://{m.group(1)}:***@", value)
+
+
+def _redact_secrets_deep(obj: object) -> object:
+    """Return a copy of obj with any embedded DSN credentials masked. Non-mutating,
+    so the caller's live db_dsn (still needed to run queries) is left intact."""
+    if isinstance(obj, dict):
+        return {k: _redact_secrets_deep(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_redact_secrets_deep(v) for v in obj]
+    return _redact_dsn_creds(obj)
+
+
 def _write_batch_metadata(path: Path, data: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    safe = _redact_secrets_deep(data)  # never persist DB credentials into committed artifacts
+    path.write_text(json.dumps(safe, indent=2), encoding="utf-8")
 
 
 def _analytics_root(rag_root: Path) -> Path:

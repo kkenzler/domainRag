@@ -6,7 +6,7 @@
     {
       "mode": "generate",
       "domain_dir": "C:\\Users\\kadek\\source\\repos\\domainRag\\example1",
-      "db_dsn": "postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb",
+      "db_dsn": "postgresql://postgres:***@localhost:5435/kinaxis_ragtestdb",
       "generate_provider": "local",
       "review_provider": "local",
       "ingest_provider": "local",
@@ -43,7 +43,7 @@
     {
       "mode": "generate",
       "domain_dir": "C:\\Users\\kadek\\source\\repos\\domainRag\\example1",
-      "db_dsn": "postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb",
+      "db_dsn": "postgresql://postgres:***@localhost:5435/kinaxis_ragtestdb",
       "generate_provider": "local",
       "review_provider": "local",
       "ingest_provider": "local",
@@ -80,7 +80,7 @@
     {
       "mode": "generate",
       "domain_dir": "C:\\Users\\kadek\\source\\repos\\domainRag\\example1",
-      "db_dsn": "postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb",
+      "db_dsn": "postgresql://postgres:***@localhost:5435/kinaxis_ragtestdb",
       "generate_provider": "local",
       "review_provider": "api",
       "ingest_provider": "local",
@@ -117,7 +117,7 @@
     {
       "mode": "generate",
       "domain_dir": "C:\\Users\\kadek\\source\\repos\\domainRag\\example1",
-      "db_dsn": "postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb",
+      "db_dsn": "postgresql://postgres:***@localhost:5435/kinaxis_ragtestdb",
       "generate_provider": "local",
       "review_provider": "api",
       "ingest_provider": "local",
@@ -154,7 +154,7 @@
     {
       "mode": "generate",
       "domain_dir": "C:\\Users\\kadek\\source\\repos\\domainRag\\example1",
-      "db_dsn": "postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb",
+      "db_dsn": "postgresql://postgres:***@localhost:5435/kinaxis_ragtestdb",
       "generate_provider": "local",
       "review_provider": "api",
       "ingest_provider": "local",
@@ -191,7 +191,7 @@
     {
       "mode": "generate",
       "domain_dir": "C:\\Users\\kadek\\source\\repos\\domainRag\\example1",
-      "db_dsn": "postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb",
+      "db_dsn": "postgresql://postgres:***@localhost:5435/kinaxis_ragtestdb",
       "generate_provider": "api",
       "review_provider": "local",
       "ingest_provider": "local",
@@ -228,7 +228,7 @@
     {
       "mode": "generate",
       "domain_dir": "C:\\Users\\kadek\\source\\repos\\domainRag\\example1",
-      "db_dsn": "postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb",
+      "db_dsn": "postgresql://postgres:***@localhost:5435/kinaxis_ragtestdb",
       "generate_provider": "api",
       "review_provider": "local",
       "ingest_provider": "local",
@@ -265,7 +265,7 @@
     {
       "mode": "generate",
       "domain_dir": "C:\\Users\\kadek\\source\\repos\\domainRag\\example1",
-      "db_dsn": "postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb",
+      "db_dsn": "postgresql://postgres:***@localhost:5435/kinaxis_ragtestdb",
       "generate_provider": "api",
       "review_provider": "local",
       "ingest_provider": "local",
@@ -302,7 +302,7 @@
     {
       "mode": "generate",
       "domain_dir": "C:\\Users\\kadek\\source\\repos\\domainRag\\example1",
-      "db_dsn": "postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb",
+      "db_dsn": "postgresql://postgres:***@localhost:5435/kinaxis_ragtestdb",
       "generate_provider": "api",
       "review_provider": "api",
       "ingest_provider": "local",
@@ -339,7 +339,7 @@
     {
       "mode": "generate",
       "domain_dir": "C:\\Users\\kadek\\source\\repos\\domainRag\\example1",
-      "db_dsn": "postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb",
+      "db_dsn": "postgresql://postgres:***@localhost:5435/kinaxis_ragtestdb",
       "generate_provider": "api",
       "review_provider": "api",
       "ingest_provider": "local",
@@ -376,7 +376,7 @@
     {
       "mode": "generate",
       "domain_dir": "C:\\Users\\kadek\\source\\repos\\domainRag\\example1",
-      "db_dsn": "postgresql://postgres:postgres@localhost:5435/kinaxis_ragtestdb",
+      "db_dsn": "postgresql://postgres:***@localhost:5435/kinaxis_ragtestdb",
       "generate_provider": "api",
       "review_provider": "api",
       "ingest_provider": "local",
