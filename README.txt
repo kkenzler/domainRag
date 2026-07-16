@@ -12,6 +12,28 @@ The system:
 - writes XLSX outputs for downstream study and analysis
 
 
+PROJECT STATUS
+--------------
+Complete and not under active development (last substantive work: April 2026).
+
+What exists and works:
+- the full document -> chunk -> embed -> generate -> review -> XLSX pipeline
+- multi-provider support (providers are configurable per pipeline step)
+- pgvector-backed retrieval
+- a comparative study: RAG-grounded generation vs baseline frontier generation, run
+  across model permutations. Design and rationale are in EVALUATION_METHODOLOGY.md;
+  raw run artifacts and per-run logs are under analytics/.
+
+What was never finished:
+- the statistical write-up of that comparative study. The runs were executed and their
+  outputs are in analytics/, but no summary of findings was published. Read the raw
+  artifacts rather than expecting a conclusions document.
+
+Running it yourself: the PREREQUISITES section below is accurate and self-contained.
+The pgvector database is a Docker container (see the docker run command); nothing here
+depends on the original author's machine.
+
+
 HOW TO START
 ------------
 Preferred launcher:
