@@ -8,7 +8,7 @@ if (-not $PromptPath) {
     $PromptPath = Join-Path (Split-Path -Parent $PSCommandPath) "claude_review_resume_prompt.md"
 }
 
-$QueueRoot = "C:\Users\kadek\source\.cogark\agent_infra\agent_sync\queues\claude"
+$QueueRoot = "C:\Users\kadek\source\.cogark\control_plane\agent_sync\queues\claude0"
 $Inbox = Join-Path $QueueRoot "inbox"
 
 New-Item -ItemType Directory -Force -Path $Inbox | Out-Null
