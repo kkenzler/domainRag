@@ -1,8 +1,8 @@
 ---
 onenote_page: repo_domainRag
 repo_path: C:\Users\kadek\source\repos\domainRag
-last_updated: 2026-07-26
-last_synced: 2026-07-26T03:05:47
+last_updated: 2026-07-29
+last_synced: 2026-07-28T03:22:17
 ---
 
 # repo_domainRag
@@ -10,7 +10,7 @@ last_synced: 2026-07-26T03:05:47
 ## Header
 - md path: domainRag\_orchestration\ONENOTE.md
 - repo root: C:\Users\kadek\source\repos\domainRag
-- last run: 2026-07-26 — ok
+- last run: 2026-07-29 — ok
 
 ## Report
 - [x] scheduled ops: 20/20 healthy; 0 failing; 0 stale; 0 pending; 0 idle/unknown
@@ -19,4 +19,5 @@ last_synced: 2026-07-26T03:05:47
 - [x] Dual agentic critique review of the generation pipeline (complete).
 
 ## Status
-The repo_domainRag project is currently in a state of completion and deployment readiness. The most recent commits have successfully updated the orchestration lane, added context map graphify output, and redacted DB DSN credentials from batch artifacts. Notably, the Q-mode generation test pass has been carried over from an inflight backlog, awaiting execution, while a dual agentic critique review of the generation pipeline has been completed. Meanwhile, scheduled operations have been running without issues, with all tasks marked as complete or pending.
+- [ ] Status not refreshed 2026-07-29 - opencode synthesis failed and Ollama unavailable at http://127.0.0.1:11435; manual re-arm required; previous Status retained.
+The repo_domainRag project is currently in a state of active development, with various components making progress. The orchestration lane has been updated to reflect recent changes, and tasks such as redacting DB DSN credentials from batch artifacts and running dual-agentic critique reviews have been completed or are in progress. However, the activation of the controller page for repo_domainRag remains pending due to outstanding issues with defining OneNote lanes via _orchestration/ONENOTE.md.
