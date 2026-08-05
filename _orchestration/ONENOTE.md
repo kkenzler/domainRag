@@ -1,8 +1,8 @@
 ---
 onenote_page: repo_domainRag
 repo_path: C:\Users\kadek\source\repos\domainRag
-last_updated: 2026-08-03
-last_synced: 2026-08-03T03:25:15
+last_updated: 2026-08-05
+last_synced: 2026-08-05T03:19:54
 ---
 
 # repo_domainRag
@@ -10,7 +10,7 @@ last_synced: 2026-08-03T03:25:15
 ## Header
 - md path: domainRag\_orchestration\ONENOTE.md
 - repo root: C:\Users\kadek\source\repos\domainRag
-- last run: 2026-08-03 — ok
+- last run: 2026-08-05 — ok
 
 ## Report
 - [ ] scheduled ops: 19/20 healthy; 1 failing; 0 stale; 0 pending; 0 idle/unknown
@@ -19,4 +19,5 @@ last_synced: 2026-08-03T03:25:15
 - [x] Dual agentic critique review of the generation pipeline (complete).
 
 ## Status
-The project is making steady progress with several key areas actively advancing, including ongoing synchronization of OneNote lane documents and context refreshes, as well as updates to orchestration lane states and analytics standardization efforts. The team has successfully completed critical tasks such as redacting database credentials from batch artifacts and finishing a dual agentic critique review of the generation pipeline.
+- [ ] Status not refreshed 2026-08-05 - opencode and Ollama synthesis failed; manual re-arm required; previous Status retained.
+The project is making steady progress with routine maintenance tasks such as OneNote mirror refreshes and timestamp synchronization, while also advancing orchestration efforts through document standardization and credential redaction. Key work items include ongoing operational monitoring with mostly healthy systems, a critical Q-mode generation test pass that's pending execution, and completed dual agentic critique reviews of the pipeline.
