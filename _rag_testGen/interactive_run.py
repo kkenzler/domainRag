@@ -110,8 +110,11 @@ DEFAULTS = {
 }
 
 if platform.system() == "Windows":
+    # Fall back to the real user profile rather than a literal "C:\\Users\\user", which was
+    # correct on no machine. APPDATA is normally set on Windows; this only matters when it isn't.
+    _appdata = os.environ.get("APPDATA", "").strip()
     DEFAULTS["LMSTUDIO_LOGPATH"] = str(
-        Path(os.environ.get("APPDATA", "C:\\Users\\user\\AppData\\Roaming"))
+        (Path(_appdata) if _appdata else Path.home() / "AppData" / "Roaming")
         / "LM Studio" / "logs" / "main.log"
     )
 else:
