@@ -1,8 +1,8 @@
 ---
 onenote_page: repo_domainRag
 repo_path: C:\Users\kadek\source\repos\domainRag
-last_updated: 2026-08-09
-last_synced: 2026-08-09T04:18:51
+last_updated: 2026-08-11
+last_synced: 2026-08-11T04:17:53
 ---
 
 # repo_domainRag
@@ -10,10 +10,10 @@ last_synced: 2026-08-09T04:18:51
 ## Header
 - md path: domainRag\_orchestration\ONENOTE.md
 - repo root: C:\Users\kadek\source\repos\domainRag
-- last run: 2026-08-09 — ok
+- last run: 2026-08-11 — ok
 
 ## Report
-- [ ] scheduled ops: 23/25 healthy; 2 failing; 0 stale; 0 pending; 0 idle/unknown
+- [x] scheduled ops: 25/25 healthy; 0 failing; 0 stale; 0 pending; 0 idle/unknown
 - [ ] Run the Q-mode generation test pass (carried from the inflight backlog).
 - [x] Redact DB DSN credentials from committed batch artifacts (done — scrubbed + pushed, `d0b87e5`).
 - [x] Dual agentic critique review of the generation pipeline (complete).
